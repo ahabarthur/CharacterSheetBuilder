@@ -1,0 +1,1703 @@
+<!-- FIFTEEN — a storyboard prompt builder. Single-file, no external state. -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FIFTEEN — Storyboard Prompt Builder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --bg:#0A0E0F; --bg-2:#0F1517; --bg-3:#141C1E; --inset:#0C1213;
+    --line:rgba(236,230,216,.10); --line-2:rgba(236,230,216,.20);
+    --ink:#ECE6D8; --dim:#94A19E; --faint:#5C6866;
+    --amber:#F0922F; --amber-2:#F6A94E; --amber-ghost:rgba(240,146,47,.14);
+    --cyan:#56C7D6; --cyan-ghost:rgba(86,199,214,.14);
+    --radius:4px;
+    --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+    --body:"Inter",system-ui,sans-serif;
+    --display:"Anton",Impact,system-ui,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:
+      radial-gradient(900px 500px at 85% -8%, rgba(240,146,47,.07), transparent 60%),
+      radial-gradient(700px 460px at -5% 110%, rgba(86,199,214,.06), transparent 60%),
+      var(--bg);
+    color:var(--ink); font-family:var(--body); font-size:15px; line-height:1.5;
+    -webkit-font-smoothing:antialiased; min-height:100vh;
+  }
+  .wrap{max-width:1180px; margin:0 auto; padding:28px 20px 64px}
+
+  /* ---- masthead ---- */
+  header.slate{
+    border:1px solid var(--line-2); border-radius:var(--radius);
+    background:linear-gradient(180deg,var(--bg-2),var(--inset));
+    padding:18px 20px; display:flex; align-items:flex-end; justify-content:space-between;
+    gap:16px; flex-wrap:wrap;
+  }
+  .brand{display:flex; align-items:baseline; gap:14px}
+  .brand h1{
+    font-family:var(--display); font-weight:400; font-size:clamp(34px,7vw,58px);
+    letter-spacing:.04em; line-height:.85; margin:0; color:var(--ink);
+  }
+  .brand h1 .ct{color:var(--amber)}
+  .brand .sub{font-family:var(--mono); font-size:11px; letter-spacing:.18em;
+    text-transform:uppercase; color:var(--dim)}
+  .meta{font-family:var(--mono); font-size:11px; letter-spacing:.14em;
+    text-transform:uppercase; color:var(--faint); text-align:right; line-height:1.7}
+  .meta b{color:var(--cyan); font-weight:500}
+  .btns-rnd{justify-content:flex-end; margin-bottom:12px}
+  .rnd{background:var(--amber); border-color:var(--amber); color:#1A1206; font-weight:600}
+  .rnd:hover{background:var(--amber-2); border-color:var(--amber-2)}
+
+  /* ---- filmstrip signature ---- */
+  .strip{
+    margin-top:14px; border:1px solid var(--line); border-radius:var(--radius);
+    background:var(--inset); padding:10px 12px;
+    display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+  }
+  .frames{display:grid; grid-template-columns:repeat(var(--fc,15),1fr); gap:5px; flex:1; min-width:240px}
+  .frame{
+    aspect-ratio:16/10; border:1px solid var(--line-2); border-radius:2px;
+    background:var(--bg-3); position:relative; overflow:hidden;
+    font-family:var(--mono); font-size:9px; color:var(--faint);
+    display:flex; align-items:flex-end; justify-content:flex-start; padding:2px 3px;
+    transition:background .25s ease, border-color .25s ease, color .25s ease;
+  }
+  .frame.lit{
+    background:linear-gradient(180deg,var(--amber-ghost),rgba(240,146,47,.04));
+    border-color:rgba(240,146,47,.5); color:var(--amber-2);
+  }
+  .frame.cursor{border-color:var(--cyan); box-shadow:0 0 0 1px var(--cyan-ghost) inset}
+  .pct{font-family:var(--mono); font-size:11px; letter-spacing:.12em; color:var(--dim);
+    white-space:nowrap}
+  .pct b{color:var(--amber); font-weight:500}
+
+  /* ---- layout ---- */
+  .grid{display:grid; grid-template-columns:1.05fr .95fr; gap:18px; margin-top:18px; align-items:start}
+  @media (max-width:920px){ .grid{grid-template-columns:1fr} }
+
+  .panel{border:1px solid var(--line); border-radius:var(--radius);
+    background:var(--bg-2); padding:18px}
+  .panel + .panel{margin-top:18px}
+
+  .eyebrow{font-family:var(--mono); font-size:10.5px; letter-spacing:.22em;
+    text-transform:uppercase; color:var(--faint); margin:0 0 14px;
+    display:flex; align-items:center; gap:8px}
+  .eyebrow .bar{height:1px; background:var(--line); flex:1}
+
+  .field{margin-bottom:16px}
+  .field:last-child{margin-bottom:0}
+  label.lab{display:flex; align-items:baseline; gap:8px; margin-bottom:7px}
+  label.lab .n{font-family:var(--mono); font-size:11px; color:var(--amber); letter-spacing:.08em}
+  label.lab .t{font-size:13px; font-weight:600; letter-spacing:.02em}
+  label.lab .h{font-size:11.5px; color:var(--dim); font-weight:400}
+
+  input[type=text], textarea{
+    width:100%; background:var(--inset); color:var(--ink);
+    border:1px solid var(--line-2); border-radius:var(--radius);
+    padding:10px 12px; font-family:var(--body); font-size:14px; resize:vertical;
+  }
+  input[type=text]::placeholder, textarea::placeholder{color:var(--faint)}
+  input[type=text]:focus-visible, textarea:focus-visible{
+    outline:none; border-color:var(--amber); box-shadow:0 0 0 3px var(--amber-ghost)}
+  textarea{min-height:64px; line-height:1.45}
+
+  .charhead{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:8px}
+  .charhead label.lab{margin-bottom:0}
+  .stepper{width:60px; color-scheme:dark; background:var(--inset); color:var(--ink);
+    border:1px solid var(--line-2); border-radius:var(--radius); padding:6px 4px 6px 9px;
+    font-family:var(--mono); font-size:13px}
+  .stepper:focus-visible{outline:none; border-color:var(--amber); box-shadow:0 0 0 3px var(--amber-ghost)}
+  .charblock + .charblock{margin-top:12px; padding-top:12px; border-top:1px dashed var(--line)}
+  .charidx{font-family:var(--mono); font-size:10px; letter-spacing:.18em; color:var(--amber); margin-bottom:6px}
+  .imgtog{display:flex; align-items:center; gap:8px; margin-top:8px; cursor:pointer; user-select:none;
+    font-family:var(--mono); font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--dim)}
+  .imgtog:hover{color:var(--ink)}
+  .imgtog input{width:14px; height:14px; accent-color:var(--amber); cursor:pointer; flex:0 0 auto}
+
+  /* chips */
+  .chips{display:flex; flex-wrap:wrap; gap:7px}
+  .chip{
+    font-family:var(--mono); font-size:11.5px; letter-spacing:.06em; text-transform:uppercase;
+    color:var(--dim); background:var(--bg-3); border:1px solid var(--line-2);
+    border-radius:999px; padding:7px 13px; cursor:pointer; transition:.15s ease;
+    user-select:none;
+  }
+  .chip:hover{border-color:var(--line-2); color:var(--ink); transform:translateY(-1px)}
+  .chip[aria-pressed=true]{
+    color:#1A1206; background:var(--amber); border-color:var(--amber); font-weight:500}
+  .chip.q[aria-pressed=true]{background:var(--cyan); border-color:var(--cyan); color:#06181B}
+  .chip:focus-visible{outline:none; box-shadow:0 0 0 3px var(--cyan-ghost)}
+  .lib summary{list-style:none; cursor:pointer; display:flex; align-items:center; gap:8px; margin:0}
+  .lib summary::-webkit-details-marker{display:none}
+  .lib summary::after{content:"▸"; color:var(--faint); margin-left:auto; transition:transform .15s ease}
+  .lib[open] summary::after{transform:rotate(90deg)}
+  .lib-body{margin-top:14px}
+  .lib-group{font-family:var(--mono); font-size:10px; letter-spacing:.18em; text-transform:uppercase; color:var(--amber); margin:14px 0 7px}
+  .lib-group:first-child{margin-top:0}
+  .tri[data-state="inc"]{color:#1A1206; background:var(--amber); border-color:var(--amber); font-weight:500}
+  .tri[data-state="exc"]{color:#E5664A; border-color:#E5664A; text-decoration:line-through}
+  .tri[data-state="inc"]::before{content:"+ "}
+  .tri[data-state="exc"]::before{content:"− "}
+  .lib-hint{font-family:var(--mono); font-size:10.5px; color:var(--faint); margin:14px 0 0}
+
+  /* toggles */
+  .toggle{
+    display:flex; align-items:center; gap:11px; width:100%;
+    background:var(--inset); border:1px solid var(--line); border-radius:var(--radius);
+    padding:10px 12px; cursor:pointer; text-align:left; color:var(--ink);
+    font-family:var(--body); font-size:13px; margin-bottom:8px; transition:.15s ease;
+  }
+  .toggle:last-child{margin-bottom:0}
+  .toggle:hover{border-color:var(--line-2)}
+  .toggle:focus-visible{outline:none; box-shadow:0 0 0 3px var(--amber-ghost)}
+  .sw{flex:0 0 auto; width:34px; height:19px; border-radius:999px; position:relative;
+    background:var(--bg-3); border:1px solid var(--line-2); transition:.18s ease}
+  .sw::after{content:""; position:absolute; top:50%; left:2px; transform:translateY(-50%);
+    width:13px; height:13px; border-radius:50%; background:var(--faint); transition:.18s ease}
+  .toggle[aria-pressed=true] .sw{background:var(--amber-ghost); border-color:var(--amber)}
+  .toggle[aria-pressed=true] .sw::after{left:17px; background:var(--amber)}
+  .toggle .tl{font-weight:500}
+  .toggle .td{display:block; font-size:11.5px; color:var(--dim); margin-top:1px}
+
+  /* output */
+  .out-wrap{position:sticky; top:18px}
+  .out-head{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:12px}
+  .out-head .eyebrow{margin:0}
+  .optbox{display:flex; align-items:center; gap:9px; margin:0 0 12px; cursor:pointer;
+    font-size:12.5px; color:var(--ink); font-family:var(--body); user-select:none;
+    border:1px solid var(--line); border-radius:var(--radius); background:var(--inset); padding:9px 12px;}
+  .optbox:hover{border-color:var(--line-2)}
+  .optbox input{width:16px; height:16px; accent-color:var(--amber); cursor:pointer; flex:0 0 auto;}
+  .optbox input:focus-visible{outline:none; box-shadow:0 0 0 3px var(--amber-ghost)}
+  .btns{display:flex; gap:8px}
+  .btns-io{justify-content:flex-end; margin:10px 0 2px}
+  button.act{
+    font-family:var(--mono); font-size:11.5px; letter-spacing:.1em; text-transform:uppercase;
+    border-radius:var(--radius); padding:9px 15px; cursor:pointer; border:1px solid var(--line-2);
+    background:var(--bg-3); color:var(--ink); transition:.15s ease;
+  }
+  button.act:hover{border-color:var(--ink); transform:translateY(-1px)}
+  button.act:focus-visible{outline:none; box-shadow:0 0 0 3px var(--cyan-ghost)}
+  button.copy{background:var(--amber); border-color:var(--amber); color:#1A1206; font-weight:500}
+  button.copy:hover{background:var(--amber-2); border-color:var(--amber-2)}
+  button.copy.done{background:var(--cyan); border-color:var(--cyan); color:#06181B}
+
+  .out{
+    border:1px solid var(--line-2); border-radius:var(--radius);
+    background:repeating-linear-gradient(var(--inset),var(--inset) 27px,rgba(236,230,216,.02) 27px,rgba(236,230,216,.02) 28px);
+    padding:16px; font-family:var(--mono); font-size:12.5px; line-height:1.55;
+    color:var(--ink); white-space:pre-wrap; word-break:break-word; min-height:80px; max-height:190px; overflow:auto;
+  }
+  .out .ph{color:var(--amber-2)}
+  .foot{font-family:var(--mono); font-size:10.5px; letter-spacing:.06em; color:var(--faint);
+    margin-top:10px; display:flex; justify-content:space-between; flex-wrap:wrap; gap:6px}
+
+  .act.done{border-color:var(--cyan); color:var(--cyan)}
+  .saved-panel{margin-top:18px}
+  .saved-item{display:flex; align-items:stretch; gap:8px; margin-bottom:8px}
+  .saved-item:last-child{margin-bottom:0}
+  .saved-load{flex:1; text-align:left; display:flex; justify-content:space-between; align-items:center; gap:12px;
+    background:var(--inset); border:1px solid var(--line-2); border-radius:var(--radius); padding:11px 13px;
+    cursor:pointer; color:var(--ink); font-family:var(--body); transition:.15s ease}
+  .saved-load:hover{border-color:var(--amber); transform:translateY(-1px)}
+  .saved-load .sname{font-weight:600; font-size:13.5px}
+  .saved-load .sdate{font-family:var(--mono); font-size:10.5px; color:var(--dim); letter-spacing:.04em; white-space:nowrap}
+  .saved-del{flex:0 0 auto; width:42px; border:1px solid var(--line-2); border-radius:var(--radius);
+    background:var(--bg-3); color:var(--dim); cursor:pointer; font-size:13px; transition:.15s ease}
+  .saved-del:hover{border-color:#E5664A; color:#E5664A}
+  .saved-load:focus-visible,.saved-del:focus-visible{outline:none; box-shadow:0 0 0 3px var(--amber-ghost)}
+  .empty{font-family:var(--mono); font-size:12px; color:var(--faint); padding:6px 2px}
+  .oplinks{display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-top:10px}
+  .oplabel{font-family:var(--mono); font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--faint); margin-right:2px}
+  .oplink{font-family:var(--mono); font-size:11.5px; letter-spacing:.05em; text-decoration:none; color:var(--ink);
+    background:var(--bg-3); border:1px solid var(--line-2); border-radius:999px; padding:7px 13px; transition:.15s ease}
+  .oplink:hover{border-color:var(--amber); color:var(--amber); transform:translateY(-1px)}
+  .oplink:focus-visible{outline:none; box-shadow:0 0 0 3px var(--amber-ghost)}
+  .preset-panel{margin-top:18px}
+  .preset-select{width:100%; color-scheme:dark; background:var(--inset); color:var(--ink);
+    border:1px solid var(--line-2); border-radius:var(--radius); padding:11px 12px;
+    font-family:var(--body); font-size:14px; cursor:pointer}
+  .preset-select:focus-visible{outline:none; border-color:var(--amber); box-shadow:0 0 0 3px var(--amber-ghost)}
+
+  @media (prefers-reduced-motion:reduce){ *{transition:none!important} }
+</style>
+
+<div class="wrap">
+  <header class="slate">
+    <div class="brand">
+      <h1>FIF<span class="ct">15</span>EEN</h1>
+      <div class="sub">Storyboard<br>Prompt Builder</div>
+    </div>
+    <div class="meta">
+      Project <b id="mProject">untitled board</b><br>
+      Format <b id="mFmt">16:9</b> · <b id="mPanels">15</b> panels · <b id="mSecs">15</b> sec
+    </div>
+  </header>
+
+  <div class="strip" aria-hidden="true">
+    <div class="frames" id="frames"></div>
+    <div class="pct">SLATE <b id="pctNum">0%</b> COMPLETE</div>
+  </div>
+
+  <div class="grid">
+    <!-- ============ CONTROLS ============ -->
+    <section>
+      <div class="panel">
+        <p class="eyebrow">Project <span class="bar"></span></p>
+        <div class="field" style="margin-bottom:0">
+          <label class="lab" for="boardName"><span class="n">✦</span><span class="t">Storyboard name</span><span class="h">your title for this board — shown on the sheet</span></label>
+          <input type="text" id="boardName" placeholder="Q3 Coffee Launch — concept board">
+        </div>
+      </div>
+
+      <div class="panel">
+        <p class="eyebrow">The Sheet · specs <span class="bar"></span></p>
+        <div class="field">
+          <label class="lab"><span class="n">▦</span><span class="t">Format</span><span class="h">aspect ratio</span></label>
+          <div class="chips" id="format"></div>
+        </div>
+        <div class="field">
+          <label class="lab"><span class="n">▣</span><span class="t">Panels</span><span class="h">frames on the sheet</span></label>
+          <div class="chips" id="panels"></div>
+        </div>
+        <div class="field">
+          <label class="lab"><span class="n">⏱</span><span class="t">Seconds</span><span class="h">total run-time</span></label>
+          <div class="chips" id="seconds"></div>
+        </div>
+        <div class="field" style="margin-bottom:0">
+          <label class="lab"><span class="n">▰</span><span class="t">Resolution</span><span class="h">target output quality</span></label>
+          <div class="chips" id="resolution"></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <p class="eyebrow">The Brief <span class="bar"></span></p>
+
+        <div class="field">
+          <label class="lab" for="subject"><span class="n">01</span><span class="t">Subject / Idea</span><span class="h">what the 15 seconds is about</span></label>
+          <textarea id="subject" data-core placeholder="A barista chasing the perfect pour-over…"></textarea>
+        </div>
+
+        <div class="field">
+          <div class="charhead">
+            <label class="lab" for="charCount"><span class="n">02</span><span class="t">Character sheet</span><span class="h">add one or more</span></label>
+            <input type="number" id="charCount" class="stepper" value="1" min="1" max="8" aria-label="Number of character sheets">
+          </div>
+          <div id="charSheets"></div>
+        </div>
+
+        <div class="field">
+          <label class="lab"><span class="n">03</span><span class="t">Film type</span><span class="h">pick one, or add your own</span></label>
+          <div class="chips" id="filmType" data-single data-core></div>
+          <div class="lib-body" id="filmTypeLib" style="margin-top:10px"></div>
+          <p class="lib-hint">Genre — tap to include (+), again to exclude (−), again to clear.</p>
+          <input type="text" id="filmCustom" placeholder="…or type a custom film type (overrides selection)" style="margin-top:8px">
+        </div>
+
+        <div class="field">
+          <label class="lab"><span class="n">04</span><span class="t">Tone</span><span class="h">pick any</span></label>
+          <div class="chips" id="tone" data-multi data-core></div>
+          <div class="lib-body" id="toneLib" style="margin-top:10px"></div>
+          <p class="lib-hint">Film look — tap to include (+), again to exclude (−), again to clear.</p>
+          <input type="text" id="toneCustom" placeholder="…or add your own tone" style="margin-top:8px">
+        </div>
+
+        <div class="field" style="margin-bottom:0">
+          <label class="lab"><span class="n">05</span><span class="t">Art style</span><span class="h">preset, or type custom</span></label>
+          <div class="chips" id="artStyle" data-single data-core></div>
+          <div class="lib-body" id="artStyleLib" style="margin-top:10px"></div>
+          <p class="lib-hint">Styles &amp; combos — tap to include (+), again to exclude (−), again to clear.</p>
+          <input type="text" id="styleCustom" placeholder="…or describe a custom style (overrides preset)" style="margin-top:8px">
+        </div>
+      </div>
+
+      <div class="panel">
+        <p class="eyebrow">The Frame <span class="bar"></span></p>
+
+        <div class="field">
+          <label class="lab" for="hero"><span class="n">06</span><span class="t">Hero / Subject</span><span class="h">what the camera loves</span></label>
+          <input type="text" id="hero" data-core placeholder="The bearded barista; the espresso machine">
+        </div>
+        <div class="field">
+          <label class="lab" for="antiHero"><span class="n">07</span><span class="t">Anti hero</span><span class="h">the rival / antagonist (optional)</span></label>
+          <input type="text" id="antiHero" placeholder="A brooding lone-wolf rival in black">
+        </div>
+        <div class="field">
+          <label class="lab" for="setting"><span class="n">08</span><span class="t">Setting</span><span class="h">where it happens</span></label>
+          <input type="text" id="setting" data-core placeholder="A warm, wood-lined corner café at golden hour">
+        </div>
+        <div class="field">
+          <label class="lab" for="payoff"><span class="n">09</span><span class="t">Payoff</span><span class="h">the final beat</span></label>
+          <input type="text" id="payoff" data-core placeholder="He steps back, arms folded — perfect rosetta, proud grin">
+        </div>
+        <div class="field">
+          <label class="lab" for="palette"><span class="n">10</span><span class="t">Palette</span><span class="h">2–4 colors</span></label>
+          <input type="text" id="palette" data-core placeholder="warm amber + deep brown">
+          <div class="chips" id="paletteQ" style="margin-top:8px"></div>
+        </div>
+        <div class="field">
+          <label class="lab"><span class="n">11</span><span class="t">Camera options</span><span class="h">sizes, angles, moves, FX, captions, film stock &amp; format</span></label>
+          <div class="lib-body" id="cameraLib" style="margin-top:4px"></div>
+          <p class="lib-hint">Tap to include (+), again to exclude (−), again to clear.</p>
+        </div>
+        <div class="field" style="margin-bottom:0">
+          <label class="lab"><span class="n">12</span><span class="t">Exclude</span><span class="h">items the model should leave out</span></label>
+          <div class="chips" id="excludeChips"></div>
+          <input type="text" id="excludeCustom" placeholder="…other items to exclude (comma-separated)" style="margin-top:8px">
+        </div>
+      </div>
+
+      <div class="panel">
+        <p class="eyebrow">Sheet Options · on / off <span class="bar"></span></p>
+        <div id="toggles"></div>
+      </div>
+    </section>
+
+    <!-- ============ OUTPUT ============ -->
+    <section>
+      <div class="out-wrap">
+        <div class="panel">
+          <div class="btns btns-rnd">
+            <button class="act rnd" id="randomBtn" type="button">🎲 Random story</button>
+          </div>
+          <div class="out-head">
+            <p class="eyebrow">Rendered Prompt <span class="bar"></span></p>
+            <div class="btns">
+              <button class="act" id="reset" type="button">Reset</button>
+              <button class="act" id="save" type="button">Save</button>
+              <button class="act copy" id="copy" type="button">Copy prompt</button>
+            </div>
+          </div>
+          <div class="btns btns-io">
+            <button class="act" id="importBtn" type="button">Import .json</button>
+            <button class="act" id="exportBtn" type="button">Export .json</button>
+          </div>
+          <input type="file" id="importFile" accept=".json,application/json" style="display:none">
+          <label class="optbox" for="helperChk">
+            <input type="checkbox" id="helperChk" checked>
+            <span>Add Storyboard prompt helper</span>
+          </label>
+          <div class="out" id="out" aria-live="polite"></div>
+          <div class="oplinks">
+            <span class="oplabel">Open &amp; paste:</span>
+            <a class="oplink" href="https://chatgpt.com" target="_blank" rel="noopener noreferrer">ChatGPT ↗</a>
+            <a class="oplink" href="https://higgsfield.ai" target="_blank" rel="noopener noreferrer">Higgsfield ↗</a>
+            <a class="oplink" href="https://gemini.google.com" target="_blank" rel="noopener noreferrer">Gemini ↗</a>
+          </div>
+          <div class="foot">
+            <span id="wc">0 words</span>
+            <span>Paste into Midjourney · nano-banana · Imagen</span>
+          </div>
+          <div class="out-head" style="margin-top:18px">
+            <p class="eyebrow">Movie prompt <span class="bar"></span></p>
+            <div class="btns"><button class="act copy" id="copy2" type="button">Copy</button></div>
+          </div>
+          <div class="out" id="out2"></div>
+          <div class="out-head" style="margin-top:18px">
+            <p class="eyebrow">Shot-1 prompt <span class="bar"></span></p>
+            <div class="btns"><button class="act copy" id="copy3" type="button">Copy</button></div>
+          </div>
+          <div class="out" id="out3"></div>
+          <div class="out-head" style="margin-top:18px">
+            <p class="eyebrow">Scene 1 → 2 prompt <span class="bar"></span></p>
+            <div class="btns"><button class="act copy" id="copy4" type="button">Copy</button></div>
+          </div>
+          <div class="out" id="out4"></div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <section class="panel saved-panel">
+    <p class="eyebrow">Saved boards <span class="bar"></span></p>
+    <div id="savedList"></div>
+  </section>
+
+  <section class="panel preset-panel">
+    <p class="eyebrow">Story presets <span class="bar"></span></p>
+    <select id="presetSelect" class="preset-select" aria-label="Load a story preset">
+      <option value="" disabled selected>Choose a story preset…</option>
+    </select>
+  </section>
+</div>
+
+<script type="text/plain" id="helperText">
+STORYBOARD HELPER — directing reference
+
+SHEET ANATOMY: one image, a grid of equal panels with thin borders and small gutters. Header: stylized TITLE top-left, "DURATION — FILM TYPE" top-right. Each panel carries a number badge, a timecode, and a caption (SHOT TYPE / ANGLE in small caps, then a short action line). Footer slate: format · style · notes, plus a small icon legend (camera movement · action/impact · atmosphere/FX · focus/detail). Hold one art style and one palette across every frame.
+
+BEAT ARC — tell a micro-story, not a set of unrelated frames:
+- Establish (first ~20%): wide → context → one hook close-up that promises something.
+- Build (next ~35%): the action ramps; vary distance and angle each frame; introduce motion.
+- Peak (next ~25%): the climax / money shot — biggest energy, tightest framing, or the key transformation.
+- Payoff (final ~20%): resolve — a return to calm, a reveal of the finished thing, or a triumphant/funny button.
+GOLDEN RULE: never repeat the same shot size twice in a row — cut wide↔close, push in, change the angle; that contrast reads as cinematic. Decide the final frame first and steer every beat toward it.
+
+SHOT VOCABULARY:
+- Sizes: establishing / wide · medium · close-up · extreme close-up · macro · two-shot · insert.
+- Angles: eye-level · low (heroic) · high · dutch / canted (tension) · over-the-shoulder · POV · top-down / overhead.
+- Moves: push in · pull out · pan / whip pan · tracking · rotation / orbit · tilt · rack focus · slow-mo · rapid cut.
+- Atmosphere / FX: speed lines · dust · spray · sparks · steam · light streaks · particles · lens flare · bokeh.
+- Caption formula: "SHOT TYPE, ANGLE/MOVE. Punchy action sentence with one sensory detail." e.g. "MACRO, EXTREME SLO-MO. Chilli split mid-air — seeds and juice explode."
+
+STYLE PRESET KEYWORDS:
+- Retro anime cel — hand-painted 70s/80s anime, aggressive speed lines, grainy paper, ink linework.
+- 3D animated short — Pixar/DreamWorks render, soft cinematic light, expressive faces, shallow depth of field.
+- 2D cartoon comedy — Ghibli-warm hand-drawn 2D, golden palette, exaggerated poses.
+- Premium product film — matte black background, dramatic rim light, macro detail, minimal italic captions.
+- Cinematic brand film — dark moody live-action, dramatic key light, slow-motion, high contrast, shallow focus.
+
+TIPS: lock the art style and palette at the front so they apply globally · keep each caption to one shot label plus one sentence (long text garbles) · repeat the hero's description across beats to keep them consistent · if small text renders messy, generate the artwork first and add captions/numbers in layout afterward.
+</script>
+
+<script>
+(function(){
+  // ---------- data ----------
+  var FILM = ["historical","product film","brand film","animated short","music video","trailer","explainer"];
+  var TONE = ["epic","comedic","premium / minimal","tender","intense"];
+  var STYLE = [
+    {label:"Retro anime cel", kw:"hand-painted 70s/80s anime, aggressive speed lines, grainy paper, ink linework"},
+    {label:"3D animated short", kw:"Pixar/DreamWorks 3D render, soft cinematic light, expressive faces, shallow depth of field"},
+    {label:"2D cartoon comedy", kw:"Ghibli-warm 2D animation, hand-drawn, golden palette, exaggerated poses"},
+    {label:"Premium product film", kw:"matte black background, dramatic rim light, macro detail, minimal italic captions"},
+    {label:"Cinematic brand film", kw:"dark moody live-action, dramatic key light, slow-motion, high contrast, shallow focus"}
+  ];
+  var PALETTES = ["warm amber + deep brown","matte black + chrome pop","cold blue + steel grey","golden-hour wash","neon night + magenta"];
+  var FORMATS = ["16:9","9:16","1:1","4:5","21:9","4:3"];
+  var PANELS  = [6,9,12,15,20,24];
+  var SECONDS = [6,10,15,30,45,60];
+  var RESOLUTION = ["720p","1K","2K","4K","6K","8K"];
+  var SHOTLIB = [
+    {group:"Sizes", items:["establishing / wide","medium","close-up","extreme close-up","macro","two-shot","insert"]},
+    {group:"Angles", items:["eye-level","low (heroic)","high","dutch / canted (tension)","over-the-shoulder","POV","top-down / overhead"]},
+    {group:"Moves", items:["push in","pull out","pan / whip pan","tracking","rotation / orbit","tilt","rack focus","slow-mo","rapid cut"]},
+    {group:"Atmosphere / FX", items:["speed lines","dust","spray","sparks","steam","light streaks","particles","lens flare","bokeh"]},
+    {group:"Caption formula", items:[{label:"caption formula", phrase:'the caption format "SHOT TYPE, ANGLE/MOVE. Punchy action sentence with one sensory detail."'}]},
+    {group:"Style keywords", items:[
+      {label:"Retro anime cel", phrase:"hand-painted 70s/80s anime, aggressive speed lines, grainy paper, ink linework"},
+      {label:"3D animated short", phrase:"Pixar/DreamWorks render, soft cinematic light, expressive faces, shallow depth of field"},
+      {label:"2D cartoon comedy", phrase:"Ghibli-warm hand-drawn 2D, golden palette, exaggerated poses"},
+      {label:"Premium product film", phrase:"matte black background, dramatic rim light, macro detail, minimal italic captions"},
+      {label:"Cinematic brand film", phrase:"dark moody live-action, dramatic key light, slow-motion, high contrast, shallow focus"}
+    ]},
+    {group:"Film stock · colour", items:[
+      {label:"Kodak Vision3 500T", phrase:"shot on Kodak Vision3 500T — cinematic, low-light, warm highlights"},
+      {label:"Kodak Vision3 250D", phrase:"shot on Kodak Vision3 250D — daylight-balanced, natural colours"},
+      {label:"Kodak Vision3 50D", phrase:"shot on Kodak Vision3 50D — extremely fine grain, crisp image"}
+    ]},
+    {group:"Film stock · reversal", items:[
+      {label:"Kodachrome", phrase:"shot on Kodachrome reversal film — rich colours, archival quality"},
+      {label:"Fujifilm Velvia", phrase:"shot on Fujifilm Velvia — highly saturated landscapes"}
+    ]},
+    {group:"Film stock · B&W", items:[
+      {label:"Kodak Tri-X 400", phrase:"shot on Kodak Tri-X 400 black & white — gritty documentary look"},
+      {label:"Ilford HP5 Plus", phrase:"shot on Ilford HP5 Plus black & white — versatile classic contrast"},
+      {label:"Ilford Delta 100", phrase:"shot on Ilford Delta 100 black & white — fine grain and sharpness"}
+    ]},
+    {group:"Film format", items:[
+      {label:"8mm", phrase:"shot on 8mm film — home-movie vintage look"},
+      {label:"Super 8", phrase:"shot on Super 8 — nostalgic, grainy"},
+      {label:"16mm", phrase:"shot on 16mm — documentary / arthouse aesthetic"},
+      {label:"35mm", phrase:"shot on 35mm — traditional Hollywood standard"},
+      {label:"65mm / 70mm", phrase:"shot on 65mm / 70mm — ultra-high resolution, epic scale"},
+      {label:"IMAX 70mm", phrase:"shot on IMAX 70mm — massive image quality and immersion"}
+    ]},
+    {group:"Genre", loc:"brief", items:[
+      {label:"Action", phrase:"action genre"},{label:"Adventure", phrase:"adventure genre"},
+      {label:"Comedy", phrase:"comedy genre"},{label:"Drama", phrase:"drama genre"},
+      {label:"Romance", phrase:"romance genre"},{label:"Thriller", phrase:"thriller genre"},
+      {label:"Horror", phrase:"horror genre"},{label:"Mystery", phrase:"mystery genre"},
+      {label:"Crime", phrase:"crime genre"},{label:"Western", phrase:"western genre"},
+      {label:"Fantasy", phrase:"fantasy genre"},{label:"Science Fiction", phrase:"science fiction genre"},
+      {label:"Historical", phrase:"historical genre"},{label:"War", phrase:"war genre"},
+      {label:"Musical", phrase:"musical genre"}
+    ]},
+    {group:"Genre · non-fiction", loc:"brief", items:[
+      {label:"Documentary", phrase:"documentary style"},{label:"Docudrama", phrase:"docudrama style"},
+      {label:"Nature Film", phrase:"nature-film style"},{label:"Biography", phrase:"biographical style"}
+    ]},
+    {group:"Genre · experimental", loc:"brief", items:[
+      {label:"Avant-garde", phrase:"avant-garde style"},{label:"Art Film", phrase:"art-film style"},
+      {label:"Abstract Film", phrase:"abstract-film style"},{label:"Surrealist Film", phrase:"surrealist-film style"}
+    ]},
+    {group:"Film look", loc:"brief", items:[
+      {label:"Super 8 Nostalgia", phrase:"Super 8 nostalgia look — grainy, warm, home-movie feel"},
+      {label:"16mm Indie", phrase:"16mm indie look — organic grain, handheld realism"},
+      {label:"Kodak Vision3 Hollywood", phrase:"Kodak Vision3 Hollywood look — modern blockbuster"},
+      {label:"70mm Epic", phrase:"70mm epic look — grand landscapes, sweeping shots"},
+      {label:"Bleach Bypass", phrase:"bleach bypass look — desaturated, high contrast"},
+      {label:"Technicolor", phrase:"Technicolor look — vibrant classic Hollywood colours"},
+      {label:"Film Noir", phrase:"film noir look — black & white, dramatic shadows"},
+      {label:"Vintage 1970s", phrase:"vintage 1970s look — warm tones, soft contrast"},
+      {label:"1980s Film", phrase:"1980s film look — neon colours, strong contrast"},
+      {label:"Modern Digital Cinema", phrase:"modern digital cinema — clean, sharp, high dynamic range"}
+    ]},
+    {group:"Style · epic & historical", loc:"brief", items:[
+      {label:"David Lean Epic", phrase:"David Lean epic — vast landscapes, sweeping camera moves, grand scale"},
+      {label:"Sword-and-Sandal Epic", phrase:"sword-and-sandal epic — ancient empires, heroic battles, golden sunlight"},
+      {label:"Biblical Epic", phrase:"biblical epic — divine atmosphere, dramatic skies, reverent compositions"},
+      {label:"Historical Drama", phrase:"historical drama — authentic costumes, naturalistic lighting"},
+      {label:"Medieval Chronicle", phrase:"medieval chronicle — rugged realism, candlelight, weathered textures"}
+    ]},
+    {group:"Style · blockbuster", loc:"brief", items:[
+      {label:"Modern Blockbuster", phrase:"modern blockbuster — large-scale action, dynamic camera work"},
+      {label:"Adventure Serial", phrase:"adventure serial — treasure hunts, practical stunts, energetic pacing"},
+      {label:"Disaster Film", phrase:"disaster film — massive destruction, high stakes"},
+      {label:"Superhero Cinema", phrase:"superhero cinema — dramatic hero shots, stylized action"},
+      {label:"Military Action", phrase:"military action film — kinetic combat, gritty realism"}
+    ]},
+    {group:"Style · prestige drama", loc:"brief", items:[
+      {label:"Oscar-Worthy Drama", phrase:"Oscar-worthy drama — intimate performances, elegant cinematography"},
+      {label:"Period Drama", phrase:"period drama — refined production design, rich costumes"},
+      {label:"Family Drama", phrase:"family drama — emotional close-ups, warm natural lighting"},
+      {label:"Courtroom Drama", phrase:"courtroom drama — tense dialogue, restrained visuals"},
+      {label:"Biographical Film", phrase:"biographical film — grounded realism, character-driven storytelling"}
+    ]},
+    {group:"Style · indie & art house", loc:"brief", items:[
+      {label:"A24 Indie", phrase:"A24 indie style — atmospheric, understated, emotionally complex"},
+      {label:"European Art Film", phrase:"European art film — contemplative pacing, visual symbolism"},
+      {label:"Festival Film", phrase:"festival film — naturalistic acting, handheld intimacy"},
+      {label:"Slow Cinema", phrase:"slow cinema — long takes, minimal dialogue"},
+      {label:"Experimental Film", phrase:"experimental film — abstract visuals, unconventional editing"}
+    ]},
+    {group:"Style · documentary", loc:"brief", items:[
+      {label:"BBC Documentary", phrase:"BBC documentary — polished, informative, cinematic"},
+      {label:"Nature Documentary", phrase:"nature documentary — macro shots, wildlife, environmental storytelling"},
+      {label:"Observational Doc", phrase:"observational documentary — fly-on-the-wall realism"},
+      {label:"War Documentary", phrase:"war documentary — archival feel, handheld footage"},
+      {label:"Investigative Doc", phrase:"investigative documentary — interviews, evidence-driven narrative"}
+    ]},
+    {group:"Style · vintage & retro", loc:"brief", items:[
+      {label:"Silent Film", phrase:"silent film — expressive acting, monochrome imagery"},
+      {label:"1920s Cinema", phrase:"1920s cinema — ornate sets, theatrical staging"},
+      {label:"Film Noir", phrase:"film noir — high-contrast shadows, mystery"},
+      {label:"1950s Technicolor", phrase:"1950s Technicolor — vibrant colours, glamorous lighting"},
+      {label:"1970s Cinema", phrase:"1970s cinema — warm grain, zoom lenses, realism"},
+      {label:"1980s Cinema", phrase:"1980s cinema — neon colours, bold contrast"},
+      {label:"1990s Blockbuster", phrase:"1990s blockbuster — practical effects, energetic editing"}
+    ]},
+    {group:"Style · genre", loc:"brief", items:[
+      {label:"Western", phrase:"western — expansive landscapes, rugged heroes"},
+      {label:"Spaghetti Western", phrase:"spaghetti western — extreme close-ups, dusty atmosphere"},
+      {label:"Crime Thriller", phrase:"crime thriller — urban environments, suspenseful framing"},
+      {label:"Detective Mystery", phrase:"detective mystery — moody lighting, investigative tension"},
+      {label:"Psychological Thriller", phrase:"psychological thriller — unsettling imagery, subjective camera"},
+      {label:"Horror Film", phrase:"horror film — suspenseful shadows, unsettling atmosphere"},
+      {label:"Gothic Horror", phrase:"gothic horror — candlelight, castles, mist"},
+      {label:"Monster Movie", phrase:"monster movie — creature reveals, escalating dread"}
+    ]},
+    {group:"Style · sci-fi & fantasy", loc:"brief", items:[
+      {label:"Hard Science Fiction", phrase:"hard science fiction — realistic technology, believable physics"},
+      {label:"Space Opera", phrase:"space opera — epic scale, cosmic adventure"},
+      {label:"Cyberpunk", phrase:"cyberpunk — neon cities, rain-soaked streets"},
+      {label:"Dystopian Future", phrase:"dystopian future — oppressive environments, bleak tone"},
+      {label:"High Fantasy", phrase:"high fantasy — mythical landscapes, heroic quests"},
+      {label:"Dark Fantasy", phrase:"dark fantasy — mystical but ominous atmosphere"}
+    ]},
+    {group:"Style · animation", loc:"brief", items:[
+      {label:"Anime Feature", phrase:"anime feature film — expressive characters, cinematic composition"},
+      {label:"Animated Fantasy Adventure", phrase:"animated fantasy adventure — vibrant worlds, emotional storytelling"},
+      {label:"Stop-Motion Film", phrase:"stop-motion film — handcrafted textures, tactile detail"},
+      {label:"Painterly Animated", phrase:"painterly animated film — brushstroke aesthetics, storybook visuals"}
+    ]},
+    {group:"Style combos", loc:"brief", items:[
+      {label:"Biblical Epic · IMAX", phrase:"biblical epic, 70mm IMAX, slow motion, golden hour"},
+      {label:"A24 · 16mm", phrase:"A24 indie, 16mm film, natural light"},
+      {label:"BBC Nature · macro", phrase:"BBC documentary, nature documentary, macro photography"},
+      {label:"Noir · rain · B&W", phrase:"film noir, rain, black & white, high contrast"},
+      {label:"Cyberpunk · night", phrase:"cyberpunk, neon, heavy rain, night"},
+      {label:"Candlelit period", phrase:"historical drama, candlelight, shallow depth of field"},
+      {label:"Oscar · handheld", phrase:"Oscar-worthy drama, Kodak Vision3 500T, handheld camera"},
+      {label:"Western · IMAX", phrase:"western, IMAX landscapes, dust storms"},
+      {label:"Anime · epic fantasy", phrase:"anime feature, epic fantasy, volumetric lighting"},
+      {label:"Spaghetti · CU", phrase:"spaghetti western, extreme close-ups, desert heat haze"},
+      {label:"Biblical Epic (recommended)", phrase:"biblical epic, 70mm IMAX, Kodak Vision3, dramatic chiaroscuro lighting, golden dust particles, shallow depth of field, ultra-detailed costumes, cinematic slow motion, volumetric god rays, emotional close-ups, award-winning cinematography, photorealistic live action"}
+    ]}
+  ];
+  var EXCLUDE = [];
+
+  // Stories drawn from the uploaded books (Genesis–2 Samuel).
+  var BIBLE_LOOK = {"biblical epic, 70mm IMAX, Kodak Vision3, dramatic chiaroscuro lighting, golden dust particles, shallow depth of field, ultra-detailed costumes, cinematic slow motion, volumetric god rays, emotional close-ups, award-winning cinematography, photorealistic live action":1};
+  var BIBLE_TOGGLES = {header:false,numbers:false,timecodes:false,captions:false,footer:false,legend:false,arc:false,vocab:false,consist:false,later:true};
+  var LIBRARY = [
+    { ref:"Genesis 1", boardName:"LET THERE BE LIGHT",
+      subject:"The first day of creation — the Spirit of God hovers over the dark, formless deep until light breaks across the waters.",
+      film:"historical", tone:["epic","tender"], style:"Cinematic brand film",
+      chars:[], hero:"the light itself, breaking the darkness", antiHero:"",
+      setting:"A vast formless ocean under total darkness, the deep slowly stirring",
+      payoff:"Brilliant light floods the waters — day divided from night, the very first morning",
+      palette:"ink black + radiant gold + deep ocean blue", shot:BIBLE_LOOK, toggles:BIBLE_TOGGLES },
+
+    { ref:"Genesis 6-8", boardName:"THE FLOOD",
+      subject:"Noah's ark rides a drowned world as the last family and the animals shelter inside the storm.",
+      film:"historical", tone:["epic","intense"], style:"Cinematic brand film",
+      chars:[{name:"Noah", desc:"weathered old shipwright, long grey beard, soaked robes", action:"gripping the ark's rail against the gale"}],
+      hero:"Noah", antiHero:"",
+      setting:"An endless raging sea under black storm clouds, a great wooden ark pitching on the waves",
+      payoff:"A dove returns with an olive leaf; the sun breaks through and a rainbow arcs over calm water",
+      palette:"storm grey + drenched brown + breakthrough gold", shot:BIBLE_LOOK, toggles:BIBLE_TOGGLES },
+
+    { ref:"Genesis 22", boardName:"THE MOUNTAIN",
+      subject:"Abraham climbs Moriah to sacrifice his son Isaac, until a voice from heaven stays his hand.",
+      film:"historical", tone:["tender","intense"], style:"Cinematic brand film",
+      chars:[{name:"Abraham", desc:"gaunt elder, anguished eyes, grey beard, knife in his hand", action:"raising the blade, trembling"},{name:"Isaac", desc:"young boy bound on the altar, trusting", action:"looking up at his father"}],
+      hero:"Abraham", antiHero:"",
+      setting:"A windswept mountain altar of rough stones at dawn",
+      payoff:"An angel stops his hand; a ram caught in the thicket takes the boy's place",
+      palette:"ashen grey + dawn amber + deep crimson", shot:BIBLE_LOOK, toggles:BIBLE_TOGGLES },
+
+    { ref:"Genesis 37", boardName:"THE COAT",
+      subject:"Joseph's jealous brothers strip away his coat of many colors and sell him to a passing caravan.",
+      film:"historical", tone:["intense","tender"], style:"Cinematic brand film",
+      chars:[{name:"Joseph", desc:"bright-eyed youth in a vivid many-colored coat", action:"reaching back as he is dragged away"}],
+      hero:"Joseph", antiHero:"his ten older brothers, envious and hard-faced",
+      setting:"A dusty desert pit and a caravan trail under a harsh sun",
+      payoff:"The torn coat dipped in goat's blood; a camel caravan carries Joseph off toward Egypt",
+      palette:"sun-bleached tan + coat of many colors + dried-blood crimson", shot:BIBLE_LOOK, toggles:BIBLE_TOGGLES },
+
+    { ref:"Exodus 3", boardName:"THE BURNING BUSH",
+      subject:"A shepherd named Moses turns aside to a bush that burns yet is not consumed, and hears his calling.",
+      film:"historical", tone:["epic","tender"], style:"Cinematic brand film",
+      chars:[{name:"Moses", desc:"rugged shepherd, staff in hand, awe on his face", action:"shielding his eyes, stepping closer"}],
+      hero:"Moses", antiHero:"",
+      setting:"A rocky desert mountainside at Horeb, a scattered flock nearby",
+      payoff:"Moses kneels, sandals removed, before the flame on holy ground",
+      palette:"desert ochre + living flame orange + holy white", shot:BIBLE_LOOK, toggles:BIBLE_TOGGLES },
+
+    { ref:"Exodus 14", boardName:"THE RED SEA",
+      subject:"Moses stretches out his staff and the sea splits into towering walls as Israel flees Pharaoh's chariots.",
+      film:"historical", tone:["epic","intense"], style:"Cinematic brand film",
+      chars:[{name:"Moses", desc:"grey-bearded prophet, robe whipping in the wind, staff raised high", action:"stretching his staff over the waters"}],
+      hero:"Moses", antiHero:"Pharaoh's charioteers thundering in pursuit",
+      setting:"A storm-driven seashore at night, walls of water rising on either side",
+      payoff:"The people cross on dry ground between two walls of sea; the waters crash back behind them",
+      palette:"midnight blue + churning teal + lightning white", shot:BIBLE_LOOK, toggles:BIBLE_TOGGLES },
+
+    { ref:"Leviticus 16", boardName:"THE SCAPEGOAT",
+      subject:"On the Day of Atonement the high priest lays the people's sins on a goat and sends it into the wilderness.",
+      film:"historical", tone:["tender","intense"], style:"Cinematic brand film",
+      chars:[{name:"Aaron", desc:"high priest in white linen and jeweled breastpiece, solemn", action:"laying both hands on the goat's head"}],
+      hero:"Aaron the high priest", antiHero:"",
+      setting:"A tabernacle court at dawn, the wide empty desert beyond the gate",
+      payoff:"The lone goat walks out into the wilderness, carrying the people's sins away",
+      palette:"linen white + desert dust + scarlet thread", shot:BIBLE_LOOK, toggles:BIBLE_TOGGLES },
+
+    { ref:"Numbers 22", boardName:"THE TALKING DONKEY",
+      subject:"The seer Balaam beats his donkey for stopping in the road — until it speaks and he sees the angel barring the way.",
+      film:"historical", tone:["comedic","tender"], style:"Cinematic brand film",
+      chars:[{name:"Balaam", desc:"robed diviner, turban, raised staff, furious then frozen", action:"striking the donkey, then staring in shock"},{name:"the donkey", desc:"loyal grey donkey, wide pleading eyes", action:"turning its head to speak"}],
+      hero:"Balaam", antiHero:"",
+      setting:"A narrow vineyard path hemmed in by stone walls",
+      payoff:"Balaam falls on his face as a sword-bearing angel blazes into view across the road",
+      palette:"warm vineyard green + dust gold + angelic white", shot:BIBLE_LOOK, toggles:BIBLE_TOGGLES },
+
+    { ref:"Deuteronomy 34", boardName:"THE PROMISED LAND",
+      subject:"From the heights of Nebo, the aged Moses gazes across the land he will never enter.",
+      film:"historical", tone:["tender","epic"], style:"Cinematic brand film",
+      chars:[{name:"Moses", desc:"ancient prophet, white beard, weathered but clear-eyed, cloak in the wind", action:"gazing out over the far valley"}],
+      hero:"Moses", antiHero:"",
+      setting:"The summit of Mount Nebo at golden hour, a green river-valley stretching to the horizon",
+      payoff:"Moses looks his last on the distant land; the wind takes his cloak as the sun lowers",
+      palette:"golden-hour amber + far-green valley + soft haze", shot:BIBLE_LOOK, toggles:BIBLE_TOGGLES },
+
+    { ref:"Joshua 6", boardName:"JERICHO",
+      subject:"Israel marches the seventh circuit around Jericho; the trumpets sound, the people shout, and the walls fall flat.",
+      film:"historical", tone:["epic","intense"], style:"Cinematic brand film",
+      chars:[{name:"Joshua", desc:"battle-scarred commander, bronze helm, raised sword", action:"giving the signal to shout"}],
+      hero:"Joshua", antiHero:"the doomed mud-brick walls of Jericho",
+      setting:"The great walls of Jericho under a blazing sky, priests with rams'-horn trumpets circling",
+      payoff:"One long trumpet blast, a thunderous shout — the mighty walls collapse flat in a cloud of dust",
+      palette:"sun-baked ochre + dust beige + trumpet brass", shot:BIBLE_LOOK, toggles:BIBLE_TOGGLES },
+
+    { ref:"Judges 16", boardName:"THE PILLARS",
+      subject:"Blinded and chained, Samson braces against the temple pillars and pulls the house of Dagon down.",
+      film:"historical", tone:["intense","epic"], style:"Cinematic brand film",
+      chars:[{name:"Samson", desc:"massive figure, regrown hair, blind, straining muscles, broken chains", action:"forcing the two great pillars apart"}],
+      hero:"Samson", antiHero:"the mocking Philistine lords of Dagon's temple",
+      setting:"A packed Philistine temple of stone, two huge central pillars, crowds on the roof",
+      payoff:"The pillars crack and the whole temple crashes down in a roar of stone and dust",
+      palette:"torchlit amber + stone grey + collapse-dust haze", shot:BIBLE_LOOK, toggles:BIBLE_TOGGLES },
+
+    { ref:"Ruth 1-2", boardName:"WHERE YOU GO",
+      subject:"Loyal Ruth refuses to leave her widowed mother-in-law and follows her to Bethlehem to glean in the fields.",
+      film:"historical", tone:["tender"], style:"Cinematic brand film",
+      chars:[{name:"Ruth", desc:"young Moabite widow, headscarf, gentle and resolute", action:"clinging to Naomi, then gleaning grain"},{name:"Naomi", desc:"grieving older widow, worn shawl, weary face", action:"turning back to embrace Ruth"}],
+      hero:"Ruth", antiHero:"",
+      setting:"The barley fields of Bethlehem at harvest, golden grain swaying",
+      payoff:"Ruth gleans in Boaz's field at dusk with an armful of barley — a new beginning",
+      palette:"warm barley gold + soft dawn rose + earth brown", shot:BIBLE_LOOK, toggles:BIBLE_TOGGLES },
+
+    { ref:"1 Samuel 17", boardName:"FIVE SMOOTH STONES",
+      subject:"A shepherd boy faces the giant Goliath with nothing but a sling and five smooth stones.",
+      film:"historical", tone:["epic","intense"], style:"Cinematic brand film",
+      chars:[{name:"David", desc:"small ruddy shepherd boy, no armor, leather sling, fierce calm", action:"loading a stone and whirling the sling"},{name:"Goliath", desc:"towering armored Philistine giant, bronze helmet, massive spear, sneering", action:"lumbering forward, mocking"}],
+      hero:"David", antiHero:"Goliath of Gath",
+      setting:"The Valley of Elah, two armies on opposing hills, a dry streambed between",
+      payoff:"The stone flies true and strikes the giant's brow; Goliath crashes to the ground",
+      palette:"dusty valley olive + bronze-armor glint + open sky blue", shot:BIBLE_LOOK, toggles:BIBLE_TOGGLES },
+
+    { ref:"2 Samuel 6", boardName:"THE DANCE",
+      subject:"King David, stripped to a linen ephod, dances with all his might before the Ark as it enters the city.",
+      film:"historical", tone:["epic","tender"], style:"Cinematic brand film",
+      chars:[{name:"David", desc:"young king in a simple linen ephod, jubilant, arms thrown wide", action:"leaping and dancing before the Ark"}],
+      hero:"David", antiHero:"",
+      setting:"The streets of Jerusalem, crowds and trumpets, the gold Ark carried high",
+      payoff:"David whirls in joy as the Ark passes and the whole city erupts in shouting and horns",
+      palette:"festival gold + linen white + jubilant sky blue", shot:BIBLE_LOOK, toggles:BIBLE_TOGGLES },
+
+    { ref:"2 Samuel 18", boardName:"CAUGHT IN THE OAK",
+      subject:"Fleeing the battle, the rebel prince Absalom is caught by his famous hair in the branches of a great oak.",
+      film:"historical", tone:["intense"], style:"Cinematic brand film",
+      chars:[{name:"Absalom", desc:"handsome prince, famous thick long hair, fine armor", action:"yanked from his mule, suspended by his hair"}],
+      hero:"Absalom", antiHero:"Joab and David's pursuing soldiers",
+      setting:"A dense forest of Ephraim, a massive spreading oak, a mule bolting away beneath",
+      payoff:"Absalom hangs between heaven and earth in the branches as the soldiers close in",
+      palette:"deep forest green + shadow black + muted steel", shot:BIBLE_LOOK, toggles:BIBLE_TOGGLES },
+
+    { ref:"Genesis 3", boardName:"THE FALL",
+      subject:"In Eden's garden the serpent tempts Eve, and the first humans taste the forbidden fruit.",
+      film:"historical", tone:["tender","intense"], style:"Cinematic brand film",
+      chars:[{name:"Eve", desc:"first woman, long flowing hair, reaching hand", action:"taking the bright fruit from the branch"},{name:"the serpent", desc:"sleek glittering snake coiled in the tree", action:"whispering, tongue flicking"}],
+      hero:"Eve", antiHero:"the serpent",
+      setting:"A lush paradise garden, the forbidden tree heavy with fruit",
+      payoff:"The fruit is bitten; the garden's light dims as the pair suddenly cover themselves in shame",
+      palette:"verdant green + golden fruit + creeping shadow", shot:BIBLE_LOOK, toggles:BIBLE_TOGGLES },
+
+    { ref:"Genesis 4", boardName:"THE FIRST BLOOD",
+      subject:"Cain's jealousy over a rejected offering boils over against his brother Abel in the field.",
+      film:"historical", tone:["intense"], style:"Cinematic brand film",
+      chars:[{name:"Cain", desc:"hard-faced farmer, clenched fists, smouldering eyes", action:"rising against his brother"},{name:"Abel", desc:"gentle young shepherd", action:"turning, unaware"}],
+      hero:"Cain", antiHero:"",
+      setting:"A lonely field between two altars — one smoking, one cold — under a brooding sky",
+      payoff:"Abel falls in the field; a mark is set on Cain as he flees east, marked and alone",
+      palette:"earth brown + ash grey + warning red", shot:BIBLE_LOOK, toggles:BIBLE_TOGGLES },
+
+    { ref:"Genesis 11", boardName:"BABEL",
+      subject:"Humanity builds a tower to reach heaven, until their language is confused and the work scatters.",
+      film:"historical", tone:["epic"], style:"Cinematic brand film",
+      chars:[{name:"the builders", desc:"crowds of workers in ancient dress hauling bricks", action:"hauling stone up the great ziggurat"}],
+      hero:"the builders of Babel", antiHero:"",
+      setting:"A colossal half-built ziggurat tower piercing the clouds",
+      payoff:"Voices break into a babble of tongues; the crowds scatter and the unfinished tower stands abandoned",
+      palette:"sun-baked brick red + dust haze + storm grey", shot:BIBLE_LOOK, toggles:BIBLE_TOGGLES },
+
+    { ref:"Genesis 19", boardName:"PILLAR OF SALT",
+      subject:"Lot and his family flee burning Sodom as fire rains from the sky — and his wife looks back.",
+      film:"historical", tone:["intense","epic"], style:"Cinematic brand film",
+      chars:[{name:"Lot", desc:"desperate man pulling his daughters by the hand", action:"running, refusing to look back"},{name:"Lot's wife", desc:"woman in a flowing robe", action:"turning to look back at the city"}],
+      hero:"Lot", antiHero:"",
+      setting:"A road out of Sodom at dawn, the city behind exploding in fire and brimstone",
+      payoff:"Lot's wife glances back and freezes into a pillar of salt as the city burns",
+      palette:"hellfire orange + ash black + salt white", shot:BIBLE_LOOK, toggles:BIBLE_TOGGLES },
+
+    { ref:"Genesis 28", boardName:"THE LADDER",
+      subject:"Fleeing alone, Jacob sleeps on a stone and dreams of a stairway to heaven thronged with angels.",
+      film:"historical", tone:["tender","epic"], style:"Cinematic brand film",
+      chars:[{name:"Jacob", desc:"young traveler asleep, head resting on a stone", action:"sleeping beneath the vision"}],
+      hero:"Jacob", antiHero:"",
+      setting:"A barren wilderness at night under a sky full of stars",
+      payoff:"A radiant stairway rises to heaven, angels ascending and descending; Jacob wakes in awe",
+      palette:"night indigo + starlight silver + heavenly gold", shot:BIBLE_LOOK, toggles:BIBLE_TOGGLES },
+
+    { ref:"Genesis 32", boardName:"WRESTLING TILL DAWN",
+      subject:"Alone by the river, Jacob wrestles a mysterious stranger all night and will not let go without a blessing.",
+      film:"historical", tone:["intense","epic"], style:"Cinematic brand film",
+      chars:[{name:"Jacob", desc:"strong man gripping hard, exhausted, determined", action:"clinging to his opponent"},{name:"the stranger", desc:"powerful glowing figure", action:"grappling, touching Jacob's hip"}],
+      hero:"Jacob", antiHero:"the mysterious stranger",
+      setting:"The banks of the Jabbok river under a fading moon, mist rising",
+      payoff:"Dawn breaks; the stranger blesses Jacob with a new name — Israel — as he limps into the light",
+      palette:"pre-dawn blue + river-mist grey + first-light gold", shot:BIBLE_LOOK, toggles:BIBLE_TOGGLES },
+
+    { ref:"Genesis 45", boardName:"I AM JOSEPH",
+      subject:"The Egyptian governor reveals to his terrified brothers that he is Joseph, the one they sold.",
+      film:"historical", tone:["tender","intense"], style:"Cinematic brand film",
+      chars:[{name:"Joseph", desc:"Egyptian governor in fine linen and gold collar, eyes brimming", action:"weeping as he reveals himself"},{name:"the brothers", desc:"travel-worn shepherds, faces frozen in shock", action:"recoiling in fear and wonder"}],
+      hero:"Joseph", antiHero:"",
+      setting:"A grand Egyptian throne hall, the servants dismissed",
+      payoff:"Joseph embraces his brothers in tears — 'I am Joseph' — their fear turning to reunion",
+      palette:"Egyptian gold + linen white + warm tear-lit amber", shot:BIBLE_LOOK, toggles:BIBLE_TOGGLES },
+
+    { ref:"Exodus 2", boardName:"THE BASKET",
+      subject:"A Hebrew mother hides her baby in a basket among the Nile reeds, watched over by his sister.",
+      film:"historical", tone:["tender"], style:"Cinematic brand film",
+      chars:[{name:"Miriam", desc:"young girl hiding in the reeds, anxious", action:"watching the basket drift"},{name:"baby Moses", desc:"infant wrapped in cloth inside a woven basket", action:"floating among the reeds"}],
+      hero:"baby Moses", antiHero:"",
+      setting:"The reedy banks of the Nile at morning, a palace beyond",
+      payoff:"Pharaoh's daughter lifts the baby from the basket; the watching sister steps forward",
+      palette:"Nile green + reed gold + soft morning blue", shot:BIBLE_LOOK, toggles:BIBLE_TOGGLES },
+
+    { ref:"Exodus 7", boardName:"THE RIVER OF BLOOD",
+      subject:"Moses stretches his staff over the Nile and the river turns to blood before Pharaoh's court.",
+      film:"historical", tone:["intense","epic"], style:"Cinematic brand film",
+      chars:[{name:"Moses", desc:"prophet, staff outstretched, defiant", action:"striking the water with his staff"},{name:"Pharaoh", desc:"hard-eyed Egyptian king on his throne", action:"watching, jaw set"}],
+      hero:"Moses", antiHero:"Pharaoh",
+      setting:"The banks of the Nile before Pharaoh's retinue",
+      payoff:"The whole river runs crimson; fish die and Egyptians recoil as Pharaoh's heart hardens",
+      palette:"blood crimson + Nile green + Egyptian gold", shot:BIBLE_LOOK, toggles:BIBLE_TOGGLES },
+
+    { ref:"Exodus 12", boardName:"THE PASSOVER",
+      subject:"On the night of the tenth plague, Israel marks their doorposts with blood as the destroyer passes over.",
+      film:"historical", tone:["intense","tender"], style:"Cinematic brand film",
+      chars:[{name:"an Israelite father", desc:"robed man with a hyssop branch", action:"painting blood on the doorframe"}],
+      hero:"the families of Israel", antiHero:"",
+      setting:"A Hebrew village at midnight, lamplit doorways, a shadow moving over the rooftops",
+      payoff:"The marked houses are passed over; inside, families eat the Passover meal, staffs in hand, ready to go",
+      palette:"midnight blue + lamp amber + doorpost red", shot:BIBLE_LOOK, toggles:BIBLE_TOGGLES },
+
+    { ref:"Exodus 19-20", boardName:"SINAI",
+      subject:"Amid thunder and smoke on Mount Sinai, Moses receives the tablets of the Law.",
+      film:"historical", tone:["epic"], style:"Cinematic brand film",
+      chars:[{name:"Moses", desc:"prophet climbing into the cloud, robe blown back", action:"reaching for the stone tablets"}],
+      hero:"Moses", antiHero:"",
+      setting:"The smoking summit of Mount Sinai, lightning and thick cloud, the people trembling below",
+      payoff:"Moses descends with two stone tablets, his face shining, the mountain still smoking",
+      palette:"storm violet + lightning white + stone grey", shot:BIBLE_LOOK, toggles:BIBLE_TOGGLES },
+
+    { ref:"Exodus 32", boardName:"THE GOLDEN CALF",
+      subject:"While Moses is on the mountain, the people forge a golden calf and dance — until he returns in fury.",
+      film:"historical", tone:["intense"], style:"Cinematic brand film",
+      chars:[{name:"Moses", desc:"prophet, tablets raised overhead, eyes blazing", action:"hurling the tablets to the ground"},{name:"the revelers", desc:"crowd dancing around a golden idol", action:"dancing, then freezing in horror"}],
+      hero:"Moses", antiHero:"the idol-worshipping crowd",
+      setting:"The camp at the foot of Sinai, a glittering golden calf on a pedestal, wild revelry",
+      payoff:"Moses smashes the tablets at the calf's feet; the music dies and the crowd scatters",
+      palette:"idol gold + firelight orange + shattered-stone grey", shot:BIBLE_LOOK, toggles:BIBLE_TOGGLES },
+
+    { ref:"Exodus 16", boardName:"BREAD FROM HEAVEN",
+      subject:"In the hungry wilderness, white manna falls with the morning dew and the people gather it in wonder.",
+      film:"historical", tone:["tender","epic"], style:"Cinematic brand film",
+      chars:[{name:"a gathering family", desc:"weary desert travelers, baskets in hand", action:"scooping up the white flakes"}],
+      hero:"the people of Israel", antiHero:"",
+      setting:"A desert camp at dawn, fine white flakes covering the ground like frost",
+      payoff:"Children laugh as their hands fill with manna; the camp eats its first bread from heaven",
+      palette:"dawn rose + manna white + desert tan", shot:BIBLE_LOOK, toggles:BIBLE_TOGGLES },
+
+    { ref:"Leviticus 9", boardName:"FIRE ON THE ALTAR",
+      subject:"As Aaron blesses the people, fire comes out from the Lord and consumes the offering on the altar.",
+      film:"historical", tone:["epic","intense"], style:"Cinematic brand film",
+      chars:[{name:"Aaron", desc:"high priest in linen and breastpiece, arms raised in blessing", action:"lifting his hands over the people"}],
+      hero:"Aaron the high priest", antiHero:"",
+      setting:"The tabernacle altar before the assembled people",
+      payoff:"Fire flashes from heaven and consumes the offering; the people shout and fall on their faces",
+      palette:"altar bronze + holy-fire orange + linen white", shot:BIBLE_LOOK, toggles:BIBLE_TOGGLES },
+
+    { ref:"Numbers 13", boardName:"THE GIANT CLUSTER",
+      subject:"The spies return from Canaan carrying a single cluster of grapes so huge it hangs from a pole between two men.",
+      film:"historical", tone:["epic","tender"], style:"Cinematic brand film",
+      chars:[{name:"two scouts", desc:"dusty spies shouldering a carrying pole", action:"hauling the enormous grape cluster"}],
+      hero:"the twelve spies", antiHero:"",
+      setting:"A desert trail back to camp, the green hills of Canaan behind",
+      payoff:"The camp gasps at the giant cluster — a land flowing with milk and honey — yet fear spreads among them",
+      palette:"vine green + grape purple + desert gold", shot:BIBLE_LOOK, toggles:BIBLE_TOGGLES },
+
+    { ref:"Numbers 20", boardName:"WATER FROM THE ROCK",
+      subject:"With the people dying of thirst, Moses strikes the rock and water gushes out in the desert.",
+      film:"historical", tone:["epic","intense"], style:"Cinematic brand film",
+      chars:[{name:"Moses", desc:"weary prophet, staff lifted high", action:"striking the rock"}],
+      hero:"Moses", antiHero:"",
+      setting:"A parched rocky desert, a thirsty crowd pressing in",
+      payoff:"Water bursts from the split rock; people and livestock rush to drink",
+      palette:"sun-bleached stone + life-giving blue + desert ochre", shot:BIBLE_LOOK, toggles:BIBLE_TOGGLES },
+
+    { ref:"Numbers 21", boardName:"THE BRONZE SERPENT",
+      subject:"Bitten by fiery serpents, the people are healed by looking up at a bronze serpent Moses raises on a pole.",
+      film:"historical", tone:["intense","tender"], style:"Cinematic brand film",
+      chars:[{name:"Moses", desc:"prophet hoisting a pole topped with a bronze snake", action:"raising the bronze serpent high"}],
+      hero:"Moses", antiHero:"the fiery serpents",
+      setting:"A desert camp strewn with the stricken, snakes in the sand",
+      payoff:"The dying look up at the gleaming bronze serpent and rise, healed",
+      palette:"snakebite red + bronze gold + desert dusk", shot:BIBLE_LOOK, toggles:BIBLE_TOGGLES },
+
+    { ref:"Numbers 16", boardName:"THE EARTH OPENS",
+      subject:"When Korah rebels against Moses, the ground splits open and swallows the rebels whole.",
+      film:"historical", tone:["intense","epic"], style:"Cinematic brand film",
+      chars:[{name:"Korah", desc:"defiant rebel leader, censer in hand", action:"shouting in defiance"},{name:"Moses", desc:"prophet, face set, arm outstretched", action:"calling on the Lord"}],
+      hero:"Moses", antiHero:"Korah and his rebels",
+      setting:"The camp, two factions facing off, the ground beginning to tremble",
+      payoff:"The earth tears open and swallows the rebels and their tents; the camp flees in terror",
+      palette:"dust brown + chasm black + censer-fire orange", shot:BIBLE_LOOK, toggles:BIBLE_TOGGLES },
+
+    { ref:"Deuteronomy 31", boardName:"THE TORCH PASSED",
+      subject:"The aged Moses lays his hands on Joshua, passing leadership of Israel to a new generation.",
+      film:"historical", tone:["tender","epic"], style:"Cinematic brand film",
+      chars:[{name:"Moses", desc:"ancient prophet, white beard, hand extended", action:"laying his hands on Joshua's shoulders"},{name:"Joshua", desc:"strong younger commander, kneeling, resolute", action:"receiving the charge"}],
+      hero:"Joshua", antiHero:"",
+      setting:"Before the assembled tribes on the plains of Moab, the tent of meeting behind",
+      payoff:"Moses commissions Joshua as the people look on — the torch passed at the edge of the Promised Land",
+      palette:"sunset amber + elder grey + hopeful gold", shot:BIBLE_LOOK, toggles:BIBLE_TOGGLES },
+
+    { ref:"Joshua 2", boardName:"THE SCARLET CORD",
+      subject:"Rahab hides the Israelite spies and lowers them by a rope from her window in the wall of Jericho.",
+      film:"historical", tone:["intense","tender"], style:"Cinematic brand film",
+      chars:[{name:"Rahab", desc:"bold woman of Jericho, headscarf, scarlet cord in hand", action:"lowering the spies from her window"},{name:"two spies", desc:"Israelite scouts descending the wall", action:"climbing down the rope"}],
+      hero:"Rahab", antiHero:"the king's searchers",
+      setting:"A house built into the great wall of Jericho at night, a scarlet cord at the window",
+      payoff:"The spies vanish into the dark; the scarlet cord stays tied at the window as the sign of her rescue",
+      palette:"night blue + torch amber + scarlet red", shot:BIBLE_LOOK, toggles:BIBLE_TOGGLES },
+
+    { ref:"Joshua 3-4", boardName:"CROSSING JORDAN",
+      subject:"The priests carry the Ark into the Jordan and the river stops, letting all Israel cross on dry ground.",
+      film:"historical", tone:["epic"], style:"Cinematic brand film",
+      chars:[{name:"the priests", desc:"robed priests bearing the gold Ark on poles", action:"stepping into the riverbed"}],
+      hero:"the priests of Israel", antiHero:"",
+      setting:"The flooded Jordan at harvest, walls of held-back water upstream",
+      payoff:"The whole nation crosses the dry riverbed; twelve stones are set up as a memorial",
+      palette:"river teal + Ark gold + riverbed brown", shot:BIBLE_LOOK, toggles:BIBLE_TOGGLES },
+
+    { ref:"Joshua 10", boardName:"THE SUN STANDS STILL",
+      subject:"In the heat of battle Joshua commands the sun to stand still, and the day stretches long until victory.",
+      film:"historical", tone:["epic","intense"], style:"Cinematic brand film",
+      chars:[{name:"Joshua", desc:"commander, sword raised to the sky", action:"commanding the sun to halt"}],
+      hero:"Joshua", antiHero:"the fleeing enemy kings",
+      setting:"A battlefield at Gibeon, hailstones falling, the sun frozen overhead",
+      payoff:"The sun hangs motionless in the sky; the long day ends in total victory",
+      palette:"blazing noon gold + battle dust + hail white", shot:BIBLE_LOOK, toggles:BIBLE_TOGGLES },
+
+    { ref:"Judges 7", boardName:"THREE HUNDRED TORCHES",
+      subject:"Gideon's three hundred surround the enemy camp at night, smash their jars, blaze their torches and sound their trumpets.",
+      film:"historical", tone:["epic","intense"], style:"Cinematic brand film",
+      chars:[{name:"Gideon", desc:"lean warrior, torch in one hand, ram's-horn trumpet in the other", action:"raising the torch and sounding the horn"}],
+      hero:"Gideon", antiHero:"the vast Midianite host",
+      setting:"A dark valley ringed by hills, the sleeping enemy camp below",
+      payoff:"Three hundred torches blaze and trumpets blare at once; the panicked enemy turns on itself in the dark",
+      palette:"night black + torch-fire orange + bronze glint", shot:BIBLE_LOOK, toggles:BIBLE_TOGGLES },
+
+    { ref:"Judges 4", boardName:"THE TENT PEG",
+      subject:"The fleeing general Sisera hides in Jael's tent, and she ends the war with a hammer and a tent peg.",
+      film:"historical", tone:["intense"], style:"Cinematic brand film",
+      chars:[{name:"Jael", desc:"resolute woman, mallet and tent peg in hand", action:"stepping silently toward the sleeping general"},{name:"Sisera", desc:"exhausted enemy commander asleep under a rug", action:"sleeping, defeated"}],
+      hero:"Jael", antiHero:"Sisera",
+      setting:"A nomad's tent at dusk, a curtain of goat-hair, a covered figure asleep",
+      payoff:"Jael drives the tent peg home; the war is over and Deborah's song begins",
+      palette:"tent-shadow brown + dusk amber + cold steel", shot:BIBLE_LOOK, toggles:BIBLE_TOGGLES },
+
+    { ref:"Judges 14", boardName:"HONEY FROM THE LION",
+      subject:"Young Samson tears a roaring lion apart with his bare hands, and later finds honey in its carcass.",
+      film:"historical", tone:["epic","intense"], style:"Cinematic brand film",
+      chars:[{name:"Samson", desc:"powerful long-haired youth, muscles straining", action:"wrestling the lion bare-handed"}],
+      hero:"Samson", antiHero:"the young lion",
+      setting:"The vineyards of Timnah, a lion lunging from the rocks",
+      payoff:"Samson overpowers the lion; days later he scoops wild honey from its carcass and eats",
+      palette:"vineyard green + lion-tawny gold + sun amber", shot:BIBLE_LOOK, toggles:BIBLE_TOGGLES },
+
+    { ref:"1 Samuel 1", boardName:"HANNAH'S PRAYER",
+      subject:"Childless and weeping, Hannah pours out her heart in the temple, her lips moving in silent prayer.",
+      film:"historical", tone:["tender"], style:"Cinematic brand film",
+      chars:[{name:"Hannah", desc:"grieving woman, tear-streaked face, hands clasped", action:"praying silently, lips moving"}],
+      hero:"Hannah", antiHero:"",
+      setting:"The dim temple at Shiloh, lamplight, the priest Eli watching from his seat",
+      payoff:"Hannah rises with peace on her face; her prayer for a son is heard",
+      palette:"temple shadow + lamp gold + tear-lit blue", shot:BIBLE_LOOK, toggles:BIBLE_TOGGLES },
+
+    { ref:"1 Samuel 3", boardName:"SPEAK, FOR YOUR SERVANT HEARS",
+      subject:"In the night the boy Samuel hears his name called and at last answers the voice of God.",
+      film:"historical", tone:["tender","epic"], style:"Cinematic brand film",
+      chars:[{name:"Samuel", desc:"young boy in a linen tunic, rising from his mat", action:"sitting up, listening in the dark"}],
+      hero:"the boy Samuel", antiHero:"",
+      setting:"The temple at Shiloh at night, the lamp of God still burning by the Ark",
+      payoff:"Samuel answers into the dark — 'Speak, for your servant hears' — and his calling begins",
+      palette:"night indigo + single-lamp gold + linen white", shot:BIBLE_LOOK, toggles:BIBLE_TOGGLES },
+
+    { ref:"1 Samuel 16", boardName:"THE ANOINTING",
+      subject:"Passing over his older brothers, the prophet Samuel anoints the shepherd boy David as king.",
+      film:"historical", tone:["epic","tender"], style:"Cinematic brand film",
+      chars:[{name:"Samuel", desc:"old prophet, horn of oil in hand", action:"pouring oil over the boy's head"},{name:"David", desc:"ruddy shepherd boy, bright-eyed and surprised", action:"kneeling as the oil runs down"}],
+      hero:"David", antiHero:"",
+      setting:"A humble house in Bethlehem, the brothers gathered, a horn of oil glinting",
+      payoff:"The oil runs down David's head and the Spirit rushes upon him — the shepherd is chosen king",
+      palette:"oil-amber gold + homespun brown + chosen white", shot:BIBLE_LOOK, toggles:BIBLE_TOGGLES },
+
+    { ref:"2 Samuel 12", boardName:"YOU ARE THE MAN",
+      subject:"The prophet Nathan tells King David a parable of a stolen lamb, then points and says: you are the man.",
+      film:"historical", tone:["intense","tender"], style:"Cinematic brand film",
+      chars:[{name:"Nathan", desc:"stern prophet, finger raised, unflinching", action:"pointing at the king"},{name:"David", desc:"king on his throne, dawning guilt", action:"recoiling under the accusation"}],
+      hero:"Nathan", antiHero:"",
+      setting:"David's throne room, the two men alone",
+      payoff:"Nathan's finger lands — 'You are the man' — and the king bows his head in repentance",
+      palette:"throne-room shadow + accusing gold + repentant grey", shot:BIBLE_LOOK, toggles:BIBLE_TOGGLES },
+
+    { ref:"2 Samuel 19", boardName:"O ABSALOM",
+      subject:"Word reaches David that his rebel son is dead, and the king breaks down in grief at the gate.",
+      film:"historical", tone:["tender","intense"], style:"Cinematic brand film",
+      chars:[{name:"David", desc:"aged king, crown set aside, face in his hands", action:"weeping, climbing to the chamber over the gate"}],
+      hero:"David", antiHero:"",
+      setting:"The chamber over the city gate, a messenger below, fading evening light",
+      payoff:"David covers his face and cries out — 'O Absalom, my son, my son' — undone by grief",
+      palette:"mourning grey + faded purple + dim lamp amber", shot:BIBLE_LOOK, toggles:BIBLE_TOGGLES }
+  ];
+  var TOGGLES = [
+    {id:"header",    on:false, tl:"Header", td:"Title logotype + duration / film type"},
+    {id:"numbers",   on:false, tl:"Per-panel badges", td:"A number in each panel's corner"},
+    {id:"timecodes", on:false, tl:"Timecodes", td:"One second per panel (00:00–00:01 …)"},
+    {id:"captions",  on:false, tl:"Captions", td:"SHOT TYPE / ANGLE + short action line"},
+    {id:"footer",    on:false, tl:"Footer slate", td:"Format · style · notes strip"},
+    {id:"legend",    on:false, tl:"Icon legend", td:"Camera · action · atmosphere · focus icons"},
+    {id:"arc",       on:false, tl:"Story-beat arc", td:"Establish → build → peak → payoff"},
+    {id:"vocab",     on:false, tl:"Shot & camera vocabulary", td:"Vary size, angle and movement every frame"},
+    {id:"consist",   on:false, tl:"Consistency + aspect ratio", td:"Same subject & lighting across all frames"},
+    {id:"later",     on:true,  tl:"Add note: art first, captions later", td:"Reminds the model to skip on-image text"}
+  ];
+
+  // ---------- state ----------
+  var state = { film:"", tone:[], style:null, palette:"", format:"16:9", panels:15, seconds:15, resolution:"2K", shot:{}, chars:[{name:"",desc:"",img:"",imgOn:false,action:""}], exclude:{} };
+  EXCLUDE.forEach(function(e){ state.exclude[e.label]=e.on; });
+  var tg = {}; TOGGLES.forEach(function(t){ tg[t.id]=t.on; });
+
+  // ---------- build chips ----------
+  function chipRow(host, items, opts){
+    items.forEach(function(it){
+      var label = typeof it==="string"? it : it.label;
+      var b=document.createElement("button");
+      b.type="button"; b.className="chip"+(opts.q?" q":"");
+      b.setAttribute("aria-pressed","false");
+      b.textContent=label; b.dataset.value=label;
+      b.addEventListener("click",function(){ opts.onpick(b,label,it); });
+      host.appendChild(b);
+    });
+  }
+  chipRow(document.getElementById("filmType"), FILM, {onpick:function(b,v){
+    single(b,"filmType"); state.film=(b.getAttribute("aria-pressed")==="true")?v:""; render();
+  }});
+  chipRow(document.getElementById("tone"), TONE, {onpick:function(b,v){
+    var on=b.getAttribute("aria-pressed")!=="true"; b.setAttribute("aria-pressed",String(on));
+    state.tone = on ? state.tone.concat([v]) : state.tone.filter(function(x){return x!==v;});
+    render();
+  }});
+  chipRow(document.getElementById("artStyle"), STYLE, {onpick:function(b,v,it){
+    single(b,"artStyle"); state.style=(b.getAttribute("aria-pressed")==="true")?it:null; render();
+  }});
+  chipRow(document.getElementById("paletteQ"), PALETTES, {q:true, onpick:function(b,v){
+    document.getElementById("palette").value=v; markPaletteQ(v); render();
+  }});
+  chipRow(document.getElementById("excludeChips"), EXCLUDE, {onpick:function(b,label){
+    var on=b.getAttribute("aria-pressed")!=="true"; b.setAttribute("aria-pressed",String(on));
+    state.exclude[label]=on; render();
+  }});
+  Array.prototype.forEach.call(document.getElementById("excludeChips").children,function(c){
+    c.setAttribute("aria-pressed", String(!!state.exclude[c.dataset.value]));
+  });
+
+  // tri-state shot library (neutral → include → exclude → neutral)
+  function applyTri(b,st){ b.dataset.state = st===1?"inc": st===-1?"exc":""; }
+  function renderShotStates(){
+    Array.prototype.forEach.call(document.querySelectorAll(".tri"),function(b){
+      applyTri(b, state.shot[b.dataset.phrase]||0);
+    });
+  }
+  var GROUP_HOST = {
+    "Genre":"filmTypeLib",
+    "Genre · non-fiction":"filmTypeLib",
+    "Genre · experimental":"filmTypeLib",
+    "Film look":"toneLib",
+    "Style · epic & historical":"artStyleLib",
+    "Style · blockbuster":"artStyleLib",
+    "Style · prestige drama":"artStyleLib",
+    "Style · indie & art house":"artStyleLib",
+    "Style · documentary":"artStyleLib",
+    "Style · vintage & retro":"artStyleLib",
+    "Style · genre":"artStyleLib",
+    "Style · sci-fi & fantasy":"artStyleLib",
+    "Style · animation":"artStyleLib",
+    "Style combos":"artStyleLib",
+    "Style keywords":"artStyleLib"
+  };
+  function buildShotLib(){
+    var libHost=document.getElementById("shotLib");
+    var SECTION_HOST = {
+      "Sizes":"cameraLib","Angles":"cameraLib","Moves":"cameraLib",
+      "Atmosphere / FX":"cameraLib","Caption formula":"cameraLib",
+      "Film stock · colour":"cameraLib","Film stock · reversal":"cameraLib",
+      "Film stock · B&W":"cameraLib","Film format":"cameraLib"
+    };
+    function mkChip(label, phrase, title){
+      var b=document.createElement("button"); b.type="button"; b.className="chip tri";
+      b.dataset.phrase=phrase; b.textContent=label;
+      if(title) b.title=title;
+      b.addEventListener("click",function(){
+        var cur=state.shot[phrase]||0, next = cur===0?1 : cur===1?-1 : 0;
+        if(next===0) delete state.shot[phrase]; else state.shot[phrase]=next;
+        applyTri(b,next); render();
+      });
+      return b;
+    }
+    var fieldAccum = {};   // hostId -> [{label,phrase,title}]
+    SHOTLIB.forEach(function(g){
+      var targetId = GROUP_HOST[g.group];
+      var fieldHost = targetId ? document.getElementById(targetId) : null;
+      if(fieldHost){
+        var arr = fieldAccum[targetId] || (fieldAccum[targetId]=[]);
+        g.items.forEach(function(it){
+          var label=typeof it==="string"?it:it.label, phrase=typeof it==="string"?it:it.phrase;
+          arr.push({label:label, phrase:phrase, title: typeof it==="string"?"":phrase});
+        });
+      } else {
+        var sectId = SECTION_HOST[g.group];
+        var host = (sectId && document.getElementById(sectId)) ? document.getElementById(sectId) : libHost;
+        if(!host) return;
+        var gl=document.createElement("div"); gl.className="lib-group"; gl.textContent=g.group; host.appendChild(gl);
+        var row=document.createElement("div"); row.className="chips"; host.appendChild(row);
+        g.items.forEach(function(it){
+          var label=typeof it==="string"?it:it.label, phrase=typeof it==="string"?it:it.phrase;
+          row.appendChild(mkChip(label, phrase, typeof it==="string"?"":phrase));
+        });
+      }
+    });
+    // Brief field hosts: drop chips that duplicate the field's preset selector,
+    // de-duplicate by phrase, sort A→Z, render one flowing row
+    function presetLabels(hostId){
+      var set={}, add=function(s){ if(s) set[String(s).trim().toLowerCase()]=1; };
+      var src = hostId==="filmTypeLib" ? FILM : hostId==="toneLib" ? TONE : hostId==="artStyleLib" ? STYLE : [];
+      (src||[]).forEach(function(s){ add(typeof s==="string"?s:s.label); });
+      return set;
+    }
+    Object.keys(fieldAccum).forEach(function(hostId){
+      var host=document.getElementById(hostId); if(!host) return;
+      var preset=presetLabels(hostId), seen={}, uniq=[];
+      fieldAccum[hostId].forEach(function(x){
+        var key=x.phrase.toLowerCase();
+        if(seen[key]) return;
+        if(preset[x.label.trim().toLowerCase()]) return;   // duplicate of a preset chip
+        seen[key]=1; uniq.push(x);
+      });
+      uniq.sort(function(a,b){ return a.label.toLowerCase().localeCompare(b.label.toLowerCase()); });
+      var row=document.createElement("div"); row.className="chips"; host.appendChild(row);
+      uniq.forEach(function(x){ row.appendChild(mkChip(x.label, x.phrase, x.title)); });
+    });
+  }
+  buildShotLib();
+
+  // single-choice spec selectors (always one active)
+  function radioRow(hostId, items, key, fmt){
+    var host=document.getElementById(hostId);
+    items.forEach(function(it){
+      var b=document.createElement("button"); b.type="button"; b.className="chip";
+      b.setAttribute("aria-pressed","false"); b.dataset.value=String(it);
+      b.textContent = fmt? fmt(it) : it;
+      b.addEventListener("click",function(){
+        Array.prototype.forEach.call(host.children,function(c){c.setAttribute("aria-pressed","false");});
+        b.setAttribute("aria-pressed","true"); state[key]=it; render();
+      });
+      host.appendChild(b);
+    });
+  }
+  function selectRadio(hostId,val){
+    var host=document.getElementById(hostId);
+    Array.prototype.forEach.call(host.children,function(c){
+      c.setAttribute("aria-pressed", String(c.dataset.value===String(val)));
+    });
+  }
+  radioRow("format", FORMATS, "format");
+  radioRow("panels", PANELS, "panels");
+  radioRow("seconds", SECONDS, "seconds", function(x){return x+"s";});
+  radioRow("resolution", RESOLUTION, "resolution");
+  selectRadio("format", state.format);
+  selectRadio("panels", state.panels);
+  selectRadio("seconds", state.seconds);
+  selectRadio("resolution", state.resolution);
+
+  function single(btn, hostId){
+    var host=document.getElementById(hostId);
+    var was=btn.getAttribute("aria-pressed")==="true";
+    Array.prototype.forEach.call(host.children,function(c){c.setAttribute("aria-pressed","false");});
+    btn.setAttribute("aria-pressed", was?"false":"true");
+  }
+  function markPaletteQ(v){
+    var host=document.getElementById("paletteQ");
+    Array.prototype.forEach.call(host.children,function(c){
+      c.setAttribute("aria-pressed", String(c.dataset.value===v));
+    });
+  }
+
+  // ---------- build toggles ----------
+  var tHost=document.getElementById("toggles");
+  TOGGLES.forEach(function(t){
+    var b=document.createElement("button");
+    b.type="button"; b.className="toggle"; b.setAttribute("aria-pressed",String(t.on));
+    b.dataset.tid=t.id;
+    b.innerHTML='<span class="sw"></span><span><span class="tl">'+t.tl+'</span><span class="td">'+t.td+'</span></span>';
+    b.addEventListener("click",function(){
+      tg[t.id]=!tg[t.id]; b.setAttribute("aria-pressed",String(tg[t.id])); render();
+    });
+    tHost.appendChild(b);
+  });
+
+  // ---------- build filmstrip (dynamic count) ----------
+  var framesHost=document.getElementById("frames");
+  var curFrames=0;
+  function ensureFrames(n){
+    if(n===curFrames) return; curFrames=n;
+    framesHost.style.setProperty("--fc", n);
+    framesHost.innerHTML="";
+    for(var i=1;i<=n;i++){ var f=document.createElement("div"); f.className="frame"; f.textContent=i; framesHost.appendChild(f); }
+  }
+
+  // ---------- inputs ----------
+  ["boardName","subject","filmCustom","toneCustom","styleCustom","hero","antiHero","setting","payoff","palette","excludeCustom"]
+    .forEach(function(id){ document.getElementById(id).addEventListener("input",function(e){
+       if(id==="palette") markPaletteQ(e.target.value);
+       render();
+    });});
+
+  // ---------- character sheets (dynamic count) ----------
+  var charsHost=document.getElementById("charSheets");
+  var charCountEl=document.getElementById("charCount");
+  function mkCharInput(i,k,ph,val,mt){
+    var el=document.createElement("input"); el.type="text"; el.placeholder=ph; el.value=val||"";
+    if(mt) el.style.marginTop="8px";
+    el.addEventListener("input",function(){ state.chars[i][k]=el.value; render(); });
+    return el;
+  }
+  function renderCharSheets(){
+    charsHost.innerHTML="";
+    state.chars.forEach(function(c,i){
+      var b=document.createElement("div"); b.className="charblock";
+      if(state.chars.length>1){ var t=document.createElement("div"); t.className="charidx"; t.textContent="CHARACTER "+(i+1); b.appendChild(t); }
+      b.appendChild(mkCharInput(i,"name","Character name or ID (e.g. Bolt; the barista)",c.name,false));
+      b.appendChild(mkCharInput(i,"desc","Description — visual identifying features (build, hair, wardrobe, colours)",c.desc,true));
+      b.appendChild(mkCharInput(i,"action","What the character is doing (e.g. carving downhill)",c.action,true));
+      var tog=document.createElement("label"); tog.className="imgtog";
+      var cb=document.createElement("input"); cb.type="checkbox"; cb.checked=!!c.imgOn;
+      var sp=document.createElement("span"); sp.textContent="Image reference URL";
+      tog.appendChild(cb); tog.appendChild(sp); b.appendChild(tog);
+      var url=mkCharInput(i,"img","Character image URL — the reference the model should use",c.img,true);
+      if(!c.imgOn) url.style.display="none";
+      b.appendChild(url);
+      cb.addEventListener("change",function(){ state.chars[i].imgOn=cb.checked; url.style.display=cb.checked?"":"none"; render(); });
+      charsHost.appendChild(b);
+    });
+  }
+  charCountEl.addEventListener("change",function(){
+    var n=parseInt(charCountEl.value,10); if(isNaN(n)||n<1) n=1; n=Math.min(8,n); charCountEl.value=n;
+    while(state.chars.length<n) state.chars.push({name:"",desc:"",img:"",imgOn:false,action:""});
+    while(state.chars.length>n) state.chars.pop();
+    renderCharSheets(); render();
+  });
+  renderCharSheets();
+
+  // ---------- helpers ----------
+  function v(id){ return (document.getElementById(id).value||"").trim(); }
+  function ph(s){ return "["+s+"]"; }                 // missing-field marker
+  function or(val,fb){ return val ? val : ph(fb); }
+  function pad(x){ x=Math.round(x); return (x<10?"0":"")+x; }
+  function fmtT(sec){ var m=Math.floor(sec/60), s=Math.round(sec%60); if(s===60){m++;s=0;} return pad(m)+":"+pad(s); }
+  function rng(a,b){ return a===b? String(a) : a+"–"+b; }
+  function gridFor(n){ var m={6:[3,2],9:[3,3],12:[4,3],15:[5,3],20:[5,4],24:[6,4]};
+    return m[n] || [Math.ceil(Math.sqrt(n)), Math.round(Math.sqrt(n))]; }
+  function arcCalc(n){
+    var e1=Math.max(1,Math.round(n*0.2)), e2=Math.max(e1+1,Math.round(n*0.53)), e3=Math.max(e2+1,Math.round(n*0.8));
+    if(e3>n-1)e3=n-1; if(e2>e3-1)e2=Math.max(e1+1,e3-1); if(e1>e2-1)e1=Math.max(1,e2-1);
+    return [e1,e2,e3];
+  }
+  function stepPhrase(secs,n){
+    var step=secs/n;
+    if(Math.abs(step-Math.round(step))<0.01){ var si=Math.round(step);
+      return si===1? "advancing one second per panel" : "advancing "+si+" seconds per panel"; }
+    return "with each panel ≈ "+step.toFixed(1)+"s";
+  }
+
+  // ---------- prompt assembly ----------
+  function build(){
+    var subject = or(v("subject"),"your subject / idea");
+    var filmVal = v("filmCustom") || state.film;
+    var filmHdr = (filmVal ? filmVal : "film").toUpperCase();
+    var styleTxt;
+    if(v("styleCustom")) styleTxt = v("styleCustom");
+    else if(state.style) styleTxt = state.style.label.toLowerCase()+" ("+state.style.kw+")";
+    else styleTxt = "[art style]";
+    var tones = state.tone.slice(); if(v("toneCustom")) tones.push(v("toneCustom"));
+    var toneTxt = tones.length? tones.join(", ") : "[tone]";
+    var hero    = or(v("hero"),"hero / subject");
+    var setting = or(v("setting"),"setting");
+    var payoff  = or(v("payoff"),"final payoff beat");
+    var title   = or(v("boardName"),"TITLE");
+    var palette = or(v("palette"),"palette");
+
+    var L=[];
+    var n=state.panels, secs=state.seconds, fmt=state.format;
+    var g=gridFor(n), cols=g[0], rows=g[1];
+
+    L.push('A single storyboard sheet — '+cols+' columns × '+rows+' rows, '+n+' equal panels with thin borders and small gutters. One cohesive '+styleTxt+' look and a '+palette+' palette held across every frame. Overall tone: '+toneTxt+'.');
+    if(tg.header) L.push('Header: the title "'+title+'" as a stylized logotype, top-left; "'+secs+' SEC — '+filmHdr+'" top-right.');
+    var castLine = 'Subject: '+subject+'. The hero the camera loves: '+hero+'.';
+    var antiHero = v("antiHero");
+    if(antiHero) castLine += ' The anti-hero / rival: '+antiHero+'.';
+    castLine += ' Setting: '+setting+'.';
+    L.push(castLine);
+    state.chars.forEach(function(c,i){
+      var nm=(c.name||"").trim(), ds=(c.desc||"").trim(), im=(c.imgOn?(c.img||"").trim():""), ac=(c.action||"").trim();
+      if(!(nm||ds||im||ac)) return;
+      var head="Character sheet"+(state.chars.length>1? " "+(i+1):"")+(nm? " — "+nm:"")+":";
+      var parts=[];
+      if(ds) parts.push(ds);
+      if(im) parts.push("use the reference image "+im+" for the character's design, costume and styling");
+      if(ac) parts.push("in this sequence the character is "+ac);
+      head += " " + (parts.length? parts.join("; ") : "establish this character and keep them consistent across all panels") + ".";
+      L.push(head);
+    });
+
+    if(tg.numbers || tg.timecodes || tg.captions){
+      var cap=[];
+      if(tg.numbers) cap.push("a number badge (1–"+n+")");
+      if(tg.timecodes) cap.push("a timecode "+stepPhrase(secs,n)+", from 00:00 to "+fmtT(secs));
+      if(tg.captions) cap.push("a caption — SHOT TYPE / ANGLE in small caps, then a short action line");
+      L.push("Give each panel "+cap.join(", ")+".");
+    }
+    if(tg.arc){
+      var a=arcCalc(n);
+      L.push("Structure the "+n+" beats as an arc: panels "+rng(1,a[0])+" establish (wide → context → hook close-up), "+rng(a[0]+1,a[1])+" build the action, "+rng(a[1]+1,a[2])+" hit the peak / climax, "+rng(a[2]+1,n)+" resolve — landing the final frame on: "+payoff+".");
+    } else {
+      L.push("Land the final frame (panel "+n+") on: "+payoff+".");
+    }
+    if(tg.vocab){
+      L.push("Vary shot size and angle every frame (wide, medium, close-up, macro, low / high / dutch angle, over-the-shoulder, POV, overhead); never repeat the same size twice in a row. Use camera moves and atmosphere cues where they fit — push-in, whip pan, slow-motion, speed lines, steam, sparks, particles, lens flare.");
+    }
+    if(tg.footer && tg.legend){
+      L.push("Footer: a production slate with FORMAT, STYLE and NOTES, plus a small icon legend — camera movement · action / impact · atmosphere / FX · focus / detail.");
+    } else if(tg.footer){
+      L.push("Footer: a production slate with FORMAT, STYLE and NOTES.");
+    } else if(tg.legend){
+      L.push("Include a small icon legend — camera movement · action / impact · atmosphere / FX · focus / detail.");
+    }
+    if(tg.consist){
+      L.push("Keep the subject, character design and lighting consistent across all "+n+" panels. Aspect ratio "+fmt+".");
+    }
+    if(tg.later){
+      L.push("Note: render the artwork cleanly first; keep on-image text minimal so captions and numbers can be added in layout afterward.");
+    }
+    var libInc=[], libExc=[];
+    SHOTLIB.forEach(function(g){ g.items.forEach(function(it){
+      var phrase=typeof it==="string"?it:it.phrase, st=state.shot[phrase];
+      if(st===1) libInc.push(phrase); else if(st===-1) libExc.push(phrase);
+    }); });
+    if(libInc.length) L.push("Emphasize and include: "+libInc.join(", ")+".");
+
+    var ex=[];
+    EXCLUDE.forEach(function(e){ if(state.exclude[e.label]) ex.push(e.phrase); });
+    var exCustom=v("excludeCustom"); if(exCustom) ex.push(exCustom);
+    libExc.forEach(function(p){ ex.push(p); });
+    if(ex.length) L.push("Do not include / explicitly exclude: "+ex.join(", ")+".");
+
+    L.push("Target output resolution: "+state.resolution+" — crisp, high detail.");
+
+    var prompt = L.join("\n\n");
+    if(document.getElementById("helperChk").checked){
+      var helper = (document.getElementById("helperText").textContent || "").trim();
+      prompt += "\n\n" + helper;
+    }
+    return prompt;
+  }
+
+  function buildMovie(){
+    var nm=(v("boardName")||"").trim();
+    var title = nm ? '"'+nm+'"' : "the storyboard's name";
+    return "Use the reference storyboard to make a full movie as visualized in the storyboard. "
+      + "Maintain the story timeline. Audio: diegetic sound only - natural ambience, environmental foley, "
+      + "and subject-driven sound. Use " + title + " as the introduction title. No other text.";
+  }
+
+  function buildShot(){
+    var nm=(v("boardName")||"").trim();
+    var title = nm ? '"'+nm+'"' : "the storyboard's name";
+    return "Use the reference storyboard. Only animate shot 1. Use the other material to understand "
+      + "the setting and background. Audio: diegetic sound only - natural ambience, environmental foley, "
+      + "and subject-driven sound. Use " + title + " as the introduction title. No other text.";
+  }
+
+  function buildScene12(){
+    var nm=(v("boardName")||"").trim();
+    var title = nm ? '"'+nm+'"' : "the storyboard's name";
+    return "Create a movie from scene 1 to scene 2, one continuous cut. Use the storyboard as reference "
+      + "material to maintain the same lighting and positioning of characters. Audio: diegetic sound only - "
+      + "natural ambience, environmental foley, and subject-driven sound. Use " + title
+      + " as the introduction title. No other text.";
+  }
+
+  // ---------- completeness ----------
+  function completeness(){
+    var done=0, total=9;
+    if(v("subject")) done++;
+    if(state.film || v("filmCustom")) done++;
+    if(state.tone.length||v("toneCustom")) done++;
+    if(state.style||v("styleCustom")) done++;
+    if(v("hero")) done++;
+    if(v("setting")) done++;
+    if(v("payoff")) done++;
+    if(v("boardName")) done++;
+    if(v("palette")) done++;
+    return {done:done,total:total,pct:Math.round(done/total*100)};
+  }
+
+  // ---------- render ----------
+  var out=document.getElementById("out");
+  function render(){
+    var text=build();
+    // highlight bracket placeholders
+    out.innerHTML = text
+      .replace(/[&<>]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;"}[c];})
+      .replace(/\[[^\]]+\]/g,function(m){return '<span class="ph">'+m+'</span>';});
+    out.dataset.raw = text;
+
+    var words = text.replace(/\[[^\]]+\]/g,"").trim().split(/\s+/).filter(Boolean).length;
+    document.getElementById("wc").textContent = words+" words";
+
+    document.getElementById("mProject").textContent = v("boardName") || "untitled board";
+    document.getElementById("mFmt").textContent = state.format;
+    document.getElementById("mPanels").textContent = state.panels;
+    document.getElementById("mSecs").textContent = state.seconds;
+
+    var movie = buildMovie();
+    var o2 = document.getElementById("out2");
+    o2.textContent = movie; o2.dataset.raw = movie;
+
+    var shot = buildShot();
+    var o3 = document.getElementById("out3");
+    o3.textContent = shot; o3.dataset.raw = shot;
+    var o4 = document.getElementById("out4");
+    var scene = buildScene12();
+    o4.textContent = scene; o4.dataset.raw = scene;
+
+    ensureFrames(state.panels);
+    var c=completeness();
+    document.getElementById("pctNum").textContent = c.pct+"%";
+    var n=state.panels, lit = Math.round(c.done/c.total*n);
+    Array.prototype.forEach.call(framesHost.children,function(fr,idx){
+      fr.classList.toggle("lit", idx<lit);
+      fr.classList.toggle("cursor", idx===lit && lit<n);
+    });
+  }
+
+  document.getElementById("helperChk").addEventListener("change", render);
+
+  // ---------- copy ----------
+  var copyBtn=document.getElementById("copy");
+  copyBtn.addEventListener("click",function(){
+    var txt=out.dataset.raw||"";
+    function done(){ copyBtn.classList.add("done"); copyBtn.textContent="Copied ✓";
+      setTimeout(function(){copyBtn.classList.remove("done"); copyBtn.textContent="Copy prompt";},1600); }
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(txt).then(done).catch(fallback);
+    } else fallback();
+    function fallback(){
+      var ta=document.createElement("textarea"); ta.value=txt;
+      ta.style.position="fixed"; ta.style.opacity="0"; document.body.appendChild(ta);
+      ta.select(); try{document.execCommand("copy");}catch(e){} document.body.removeChild(ta); done();
+    }
+  });
+
+  var copyBtn2=document.getElementById("copy2");
+  copyBtn2.addEventListener("click",function(){
+    var txt=document.getElementById("out2").dataset.raw||"";
+    function done(){ copyBtn2.classList.add("done"); copyBtn2.textContent="Copied ✓";
+      setTimeout(function(){copyBtn2.classList.remove("done"); copyBtn2.textContent="Copy";},1600); }
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(txt).then(done).catch(fallback);
+    } else fallback();
+    function fallback(){
+      var ta=document.createElement("textarea"); ta.value=txt;
+      ta.style.position="fixed"; ta.style.opacity="0"; document.body.appendChild(ta);
+      ta.select(); try{document.execCommand("copy");}catch(e){} document.body.removeChild(ta); done();
+    }
+  });
+
+  var copyBtn3=document.getElementById("copy3");
+  copyBtn3.addEventListener("click",function(){
+    var txt=document.getElementById("out3").dataset.raw||"";
+    function done(){ copyBtn3.classList.add("done"); copyBtn3.textContent="Copied ✓";
+      setTimeout(function(){copyBtn3.classList.remove("done"); copyBtn3.textContent="Copy";},1600); }
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(txt).then(done).catch(fallback);
+    } else fallback();
+    function fallback(){
+      var ta=document.createElement("textarea"); ta.value=txt;
+      ta.style.position="fixed"; ta.style.opacity="0"; document.body.appendChild(ta);
+      ta.select(); try{document.execCommand("copy");}catch(e){} document.body.removeChild(ta); done();
+    }
+  });
+
+  var copyBtn4=document.getElementById("copy4");
+  copyBtn4.addEventListener("click",function(){
+    var txt=document.getElementById("out4").dataset.raw||"";
+    function done(){ copyBtn4.classList.add("done"); copyBtn4.textContent="Copied ✓";
+      setTimeout(function(){copyBtn4.classList.remove("done"); copyBtn4.textContent="Copy";},1600); }
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(txt).then(done).catch(fallback);
+    } else fallback();
+    function fallback(){
+      var ta=document.createElement("textarea"); ta.value=txt;
+      ta.style.position="fixed"; ta.style.opacity="0"; document.body.appendChild(ta);
+      ta.select(); try{document.execCommand("copy");}catch(e){} document.body.removeChild(ta); done();
+    }
+  });
+
+  document.getElementById("reset").addEventListener("click",function(){
+    ["boardName","subject","filmCustom","toneCustom","styleCustom","hero","antiHero","setting","payoff","palette","excludeCustom"]
+      .forEach(function(id){document.getElementById(id).value="";});
+    state={film:"",tone:[],style:null,palette:"",format:"16:9",panels:15,seconds:15,resolution:"2K",shot:{},chars:[{name:"",desc:"",img:"",imgOn:false,action:""}],exclude:{}};
+    document.querySelectorAll(".chip").forEach(function(c){c.setAttribute("aria-pressed","false");});
+    renderShotStates();
+    selectRadio("format","16:9"); selectRadio("panels",15); selectRadio("seconds",15); selectRadio("resolution","2K");
+    state.chars=[{name:"",desc:"",img:"",imgOn:false,action:""}]; charCountEl.value=1; renderCharSheets();
+    EXCLUDE.forEach(function(e){ state.exclude[e.label]=e.on; });
+    Array.prototype.forEach.call(document.getElementById("excludeChips").children,function(c){
+      c.setAttribute("aria-pressed", String(!!state.exclude[c.dataset.value]));
+    });
+    document.getElementById("helperChk").checked = true;
+    TOGGLES.forEach(function(t){ tg[t.id]=t.on; });
+    Array.prototype.forEach.call(tHost.children,function(b){ var id=b.dataset.tid; if(id) b.setAttribute("aria-pressed", String(!!tg[id])); });
+    render();
+  });
+
+  // ---------- save / load boards ----------
+  var STORE_KEY="fifteen.boards.v1";
+  var memStore=null;
+  function loadStore(){
+    if(memStore) return memStore;
+    try{ var raw=localStorage.getItem(STORE_KEY); memStore = raw? JSON.parse(raw):[]; }
+    catch(e){ memStore=[]; }
+    if(!Array.isArray(memStore)) memStore=[];
+    return memStore;
+  }
+  function persistStore(){ try{ localStorage.setItem(STORE_KEY, JSON.stringify(memStore)); }catch(e){} }
+
+  function setVal(id,val){ var el=document.getElementById(id); if(el) el.value = val||""; }
+  function pressOne(hostId,val){ var h=document.getElementById(hostId);
+    Array.prototype.forEach.call(h.children,function(c){ c.setAttribute("aria-pressed", String(c.dataset.value===val)); }); }
+  function pressMany(hostId,vals){ var h=document.getElementById(hostId), set={}; (vals||[]).forEach(function(x){set[x]=1;});
+    Array.prototype.forEach.call(h.children,function(c){ c.setAttribute("aria-pressed", String(!!set[c.dataset.value])); }); }
+
+  function collectState(){
+    return {
+      boardName:v("boardName"), subject:v("subject"),
+      film:state.film, filmCustom:v("filmCustom"),
+      tone:state.tone.slice(), toneCustom:v("toneCustom"),
+      style: state.style? state.style.label : null, styleCustom:v("styleCustom"),
+      hero:v("hero"), antiHero:v("antiHero"), setting:v("setting"), payoff:v("payoff"),
+      palette:v("palette"), excludeCustom:v("excludeCustom"),
+      exclude: Object.assign({}, state.exclude),
+      shot: Object.assign({}, state.shot),
+      format:state.format, panels:state.panels, seconds:state.seconds, resolution:state.resolution,
+      chars: state.chars.map(function(c){return {name:c.name,desc:c.desc,img:c.img,imgOn:c.imgOn,action:c.action};}),
+      toggles: Object.assign({}, tg),
+      helper: document.getElementById("helperChk").checked
+    };
+  }
+  function applyState(s){
+    if(!s) return;
+    setVal("boardName",s.boardName); setVal("subject",s.subject);
+    setVal("filmCustom",s.filmCustom); setVal("toneCustom",s.toneCustom); setVal("styleCustom",s.styleCustom);
+    setVal("hero",s.hero); setVal("antiHero",s.antiHero); setVal("setting",s.setting); setVal("payoff",s.payoff);
+    setVal("palette",s.palette); setVal("excludeCustom",s.excludeCustom);
+    state.film = s.film||""; pressOne("filmType", state.film);
+    state.tone = (s.tone||[]).slice(); pressMany("tone", state.tone);
+    state.style = s.style ? (STYLE.filter(function(x){return x.label===s.style;})[0]||null) : null;
+    pressOne("artStyle", state.style? state.style.label : null);
+    state.exclude = Object.assign({}, s.exclude||{});
+    Array.prototype.forEach.call(document.getElementById("excludeChips").children,function(c){
+      c.setAttribute("aria-pressed", String(!!state.exclude[c.dataset.value])); });
+    state.shot = Object.assign({}, s.shot||{}); renderShotStates();
+    markPaletteQ(s.palette||"");
+    state.format=s.format||"16:9"; selectRadio("format",state.format);
+    state.panels=s.panels||15; selectRadio("panels",state.panels);
+    state.seconds=s.seconds||15; selectRadio("seconds",state.seconds);
+    state.resolution=s.resolution||"2K"; selectRadio("resolution",state.resolution);
+    state.chars=(s.chars&&s.chars.length? s.chars:[{name:"",desc:"",img:"",imgOn:false,action:""}]).map(function(c){
+      return {name:c.name||"",desc:c.desc||"",img:c.img||"",imgOn:!!c.imgOn,action:c.action||""}; });
+    charCountEl.value=state.chars.length; renderCharSheets();
+    if(s.toggles){ Object.keys(tg).forEach(function(k){ if(k in s.toggles) tg[k]=!!s.toggles[k]; }); }
+    Array.prototype.forEach.call(tHost.children,function(b){ var id=b.dataset.tid; if(id) b.setAttribute("aria-pressed", String(!!tg[id])); });
+    document.getElementById("helperChk").checked = s.helper!==false;
+    render();
+  }
+  function renderSaved(){
+    var list=loadStore(), host=document.getElementById("savedList"); host.innerHTML="";
+    if(!list.length){ host.innerHTML='<div class="empty">No saved boards yet — fill the form and hit Save.</div>'; return; }
+    list.forEach(function(en){
+      var row=document.createElement("div"); row.className="saved-item";
+      var load=document.createElement("button"); load.type="button"; load.className="saved-load";
+      var nm=document.createElement("span"); nm.className="sname"; nm.textContent=en.name;
+      var dt=document.createElement("span"); dt.className="sdate"; dt.textContent=en.date;
+      load.appendChild(nm); load.appendChild(dt);
+      load.addEventListener("click",function(){ applyState(en.data); });
+      var del=document.createElement("button"); del.type="button"; del.className="saved-del"; del.textContent="✕"; del.title="Delete";
+      del.addEventListener("click",function(ev){ ev.stopPropagation(); memStore=loadStore().filter(function(e){return e.id!==en.id;}); persistStore(); renderSaved(); });
+      row.appendChild(load); row.appendChild(del); host.appendChild(row);
+    });
+  }
+  document.getElementById("save").addEventListener("click",function(){
+    var list=loadStore();
+    var nm=(v("boardName")||"").trim()||"Untitled board";
+    list.unshift({ id:String(Date.now())+Math.random().toString(36).slice(2,6), name:nm, date:new Date().toLocaleString(), data:collectState() });
+    persistStore(); renderSaved();
+    var b=document.getElementById("save"); b.textContent="Saved ✓"; b.classList.add("done");
+    setTimeout(function(){ b.textContent="Save"; b.classList.remove("done"); },1400);
+  });
+  renderSaved();
+
+  // ---------- export / import (.json) ----------
+  function sanitizeName(n){ return ((n||"board").replace(/[^a-z0-9\-_]+/gi,"_").replace(/^_+|_+$/g,"").slice(0,40))||"board"; }
+  document.getElementById("exportBtn").addEventListener("click",function(){
+    var nm=(v("boardName")||"").trim()||"Untitled board";
+    var payload={ app:"fifteen", version:1, name:nm, date:new Date().toISOString(), data:collectState() };
+    var blob=new Blob([JSON.stringify(payload,null,2)], {type:"application/json"});
+    var url=URL.createObjectURL(blob);
+    var a=document.createElement("a"); a.href=url; a.download="FIFTEEN_"+sanitizeName(nm)+".json";
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function(){ URL.revokeObjectURL(url); },1000);
+    var b=document.getElementById("exportBtn"), o=b.textContent; b.textContent="Exported ✓"; b.classList.add("done");
+    setTimeout(function(){ b.textContent=o; b.classList.remove("done"); },1400);
+  });
+  document.getElementById("importBtn").addEventListener("click",function(){ document.getElementById("importFile").click(); });
+  document.getElementById("importFile").addEventListener("change",function(e){
+    var f=e.target.files && e.target.files[0]; if(!f){ return; }
+    var r=new FileReader();
+    r.onload=function(){
+      var b=document.getElementById("importBtn"), o=b.textContent;
+      try{
+        var parsed=JSON.parse(r.result);
+        var s=(parsed && parsed.data)? parsed.data : parsed;
+        applyState(s);
+        b.textContent="Imported ✓"; b.classList.add("done");
+        setTimeout(function(){ b.textContent=o; b.classList.remove("done"); },1400);
+      }catch(err){
+        b.textContent="Invalid file"; b.style.borderColor="#E5664A"; b.style.color="#E5664A";
+        setTimeout(function(){ b.textContent=o; b.style.borderColor=""; b.style.color=""; },1800);
+      }
+    };
+    r.readAsText(f);
+    e.target.value="";
+  });
+
+  // ---------- random story (from the uploaded books) ----------
+  document.getElementById("randomBtn").addEventListener("click",function(){
+    var story=LIBRARY[Math.floor(Math.random()*LIBRARY.length)];
+    var s=Object.assign({}, story); s.exclude={};
+    applyState(s);
+    var b=document.getElementById("randomBtn");
+    b.textContent="▶ "+(story.boardName||"LOADED");
+    setTimeout(function(){ b.textContent="🎲 Random story"; },1700);
+  });
+
+  // ---------- story preset dropdown ----------
+  var presetSel=document.getElementById("presetSelect");
+  (function(){
+    var lastBook=null, grp=null;
+    LIBRARY.forEach(function(story,i){
+      var book=(story.ref||"").replace(/\s+\d.*$/,"") || "Other";
+      if(book!==lastBook){ grp=document.createElement("optgroup"); grp.label=book; presetSel.appendChild(grp); lastBook=book; }
+      var opt=document.createElement("option"); opt.value=String(i);
+      opt.textContent=story.boardName + (story.ref? "  ·  "+story.ref : "");
+      grp.appendChild(opt);
+    });
+  })();
+  presetSel.addEventListener("change",function(){
+    var i=parseInt(presetSel.value,10); if(isNaN(i)||!LIBRARY[i]) return;
+    var s=Object.assign({}, LIBRARY[i]); s.exclude={};
+    applyState(s);
+  });
+
+  render();
+})();
+</script>
